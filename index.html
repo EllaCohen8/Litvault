@@ -154,7 +154,7 @@ tr:hover td{background:#fafaf8}
 </head>
 <body>
 
-<!-- ══ NAME PROMPT ════════════════════════════════════════ -->
+<!-- ══ LOGIN ════════════════════════════════════════════════ -->
 <div id="auth-view" class="auth-wrap">
   <div class="auth-card">
     <div class="logo">
@@ -165,11 +165,17 @@ tr:hover td{background:#fafaf8}
       </div>
       LitVault
     </div>
-    <div class="auth-sub">Enter your name to get started</div>
+    <div class="auth-sub">Sign in to your workspace</div>
     <div class="auth-err" id="auth-err"></div>
     <div class="fg">
-      <label>Your name</label>
-      <input class="fi" id="auth-name" type="text" placeholder="Dr. Jane Smith" autofocus>
+      <label>Who are you?</label>
+      <select class="fi" id="auth-user" style="cursor:pointer">
+        <option value="">— Select your name —</option>
+      </select>
+    </div>
+    <div class="fg" id="pass-wrap">
+      <label>Password</label>
+      <input class="fi" id="auth-pass" type="password" placeholder="Enter your password">
     </div>
     <button class="btn btn-primary" id="auth-btn" onclick="doAuth()">Enter LitVault →</button>
   </div>
@@ -195,6 +201,7 @@ tr:hover td{background:#fafaf8}
         <span id="my-name"></span>
       </div>
       <button class="btn" onclick="changeName()" style="font-size:11px;padding:5px 10px">Change name</button>
+      <button class="btn" onclick="doSignOut()" style="font-size:11px;padding:5px 10px">Sign out</button>
     </div>
   </nav>
 
@@ -218,7 +225,7 @@ tr:hover td{background:#fafaf8}
           </div>
         </div>
         <div style="display:flex;gap:8px">
-          <button class="btn btn-primary" onclick="gotoTab('upload')" style="font-size:11px;gap:5px;padding:6px 12px">
+          <button class="btn btn-primary" onclick="gotoTab('upload')" id="add-files-btn" style="font-size:11px;gap:5px;padding:6px 12px">
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5.5 1v8M1 5.5l4.5-4.5 4.5 4.5"/></svg>
             + Add files
           </button>
@@ -528,33 +535,71 @@ const avCol=uid=>{let h=0;for(let c of(uid||''))h=((h<<5)-h)+c.charCodeAt(0);ret
 const ini=n=>(n||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
 const pct=(n,t)=>t?`${Math.round(n/t*100)}%`:'0%';
 
-// ── Auth ───────────────────────────────────────────────────
-// ── No auth — just a name ──────────────────────────────────
-let myName = localStorage.getItem('lv-name') || '';
-let myId = localStorage.getItem('lv-id') || (()=>{ const id=crypto.randomUUID(); localStorage.setItem('lv-id',id); return id; })();
+// ── Auth & Permissions ─────────────────────────────────────
+let myName='', myRole='viewer';
+let myId=localStorage.getItem('lv-id')||(()=>{const id=crypto.randomUUID();localStorage.setItem('lv-id',id);return id;})();
 
-function doAuth(){
-  const name = document.getElementById('auth-name').value.trim();
-  const errEl = document.getElementById('auth-err');
-  if(!name){ errEl.textContent='Please enter your name.'; errEl.className='auth-err err'; errEl.style.display='block'; return; }
-  myName = name;
-  localStorage.setItem('lv-name', name);
-  showApp();
-  loadPapers();
-  subscribeRealtime();
-  loadActivity();
+function isAdmin(){ return myRole==='admin'; }
+function isGuest(){ return myRole==='guest'; }
+function canEdit(){ return myRole==='admin'||myRole==='viewer'; }
+
+async function loadUserList(){
+  const{data}=await db.from('users').select('name').order('name');
+  const sel=document.getElementById('auth-user');
+  if(!sel||!data) return;
+  data.forEach(u=>{
+    const o=document.createElement('option');
+    o.value=u.name; o.textContent=u.name;
+    sel.appendChild(o);
+  });
+  // Show/hide password field based on selection
+  sel.addEventListener('change',()=>{
+    const passWrap=document.getElementById('pass-wrap');
+    if(passWrap) passWrap.style.display=sel.value==='Guest'?'none':'block';
+  });
+}
+
+async function doAuth(){
+  const errEl=document.getElementById('auth-err');
+  errEl.style.display='none';
+  const name=document.getElementById('auth-user').value;
+  const pass=name==='Guest'?'':(document.getElementById('auth-pass').value);
+  if(!name){errEl.textContent='Please select your name.';errEl.className='auth-err err';errEl.style.display='block';return;}
+  if(!pass&&name!=='Guest'){errEl.textContent='Please enter your password.';errEl.className='auth-err err';errEl.style.display='block';return;}
+
+  const btn=document.getElementById('auth-btn');
+  btn.textContent='Checking…'; btn.disabled=true;
+
+  let hashHex='';
+  if(name!=='Guest'){
+    const hashBuf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pass));
+    hashHex=Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+
+  const{data,error}=await db.from('users').select('name,role').eq('name',name).eq('password_hash',hashHex).single();
+
+  if(error||!data){
+    errEl.textContent='Incorrect password. Please try again.';
+    errEl.className='auth-err err'; errEl.style.display='block';
+    btn.textContent='Enter LitVault →'; btn.disabled=false;
+    return;
+  }
+
+  myName=data.name; myRole=data.role;
+  localStorage.setItem('lv-name',myName);
+  localStorage.setItem('lv-role',myRole);
+  showApp(); loadPapers(); subscribeRealtime(); loadActivity();
+}
+
+function doSignOut(){
+  localStorage.removeItem('lv-name');
+  localStorage.removeItem('lv-role');
+  location.reload();
 }
 
 function changeName(){
-  const n = prompt('Enter your name:', myName);
-  if(n && n.trim()){
-    myName = n.trim();
-    localStorage.setItem('lv-name', myName);
-    document.getElementById('my-name').textContent = myName;
-    document.getElementById('my-av').textContent = ini(myName);
-    document.getElementById('my-av').style.background = avCol(myId);
-    if(presenceCh) presenceCh.track({user_id:myId, name:myName});
-  }
+  if(!isAdmin()) return;
+  alert('To manage users or change passwords, use the Supabase dashboard → Table Editor → users.');
 }
 
 function showApp(){
@@ -562,26 +607,43 @@ function showApp(){
   document.getElementById('app').style.display='block';
   const av=document.getElementById('my-av');
   av.textContent=ini(myName); av.style.background=avCol(myId);
-  document.getElementById('my-name').textContent=myName;
+  document.getElementById('my-name').textContent=myName+(isGuest()?' (Guest)':'');
+  // Tab visibility
+  const uploadTab=document.querySelector('.tab[onclick="gotoTab(\'upload\')"]');
+  const activityTab=document.querySelector('.tab[onclick="gotoTab(\'activity\')"]');
+  if(uploadTab) uploadTab.style.display=isAdmin()?'':'none';
+  if(activityTab) activityTab.style.display=isAdmin()?'':'none';
+  const addBtn=document.getElementById('add-files-btn');
+  if(addBtn) addBtn.style.display=isAdmin()?'':'none';
+  // Guest banner
+  if(isGuest()){
+    const banner=document.createElement('div');
+    banner.style.cssText='background:#f1efe8;border-bottom:0.5px solid var(--border);padding:6px 20px;font-size:11px;color:var(--text2);text-align:center';
+    banner.textContent='👁 View-only mode — you can see all data in real time but cannot make changes.';
+    document.querySelector('.tabs-bar').after(banner);
+  }
 }
 
-// Auto-enter if name already saved
-if(myName){
+// Auto-login if session saved
+const _savedName=localStorage.getItem('lv-name');
+const _savedRole=localStorage.getItem('lv-role');
+if(_savedName&&_savedRole){
+  myName=_savedName; myRole=_savedRole;
   showApp();
-  document.addEventListener('DOMContentLoaded', ()=>{ loadPapers(); subscribeRealtime(); loadActivity(); });
+  document.addEventListener('DOMContentLoaded',()=>{loadPapers();subscribeRealtime();loadActivity();});
 }
 
-document.addEventListener('DOMContentLoaded', ()=>{
-  const nameInput = document.getElementById('auth-name');
-  if(nameInput) nameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') doAuth(); });
+document.addEventListener('DOMContentLoaded',()=>{
+  loadUserList();
+  const passInput=document.getElementById('auth-pass');
+  if(passInput) passInput.addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();});
 });
 
 function initApp(){
   document.getElementById('auth-view').style.display='none';
   document.getElementById('app').style.display='block';
-  const col=avCol(myId);
   const av=document.getElementById('my-av');
-  av.textContent=ini(myName); av.style.background=col;
+  av.textContent=ini(myName); av.style.background=avCol(myId);
   document.getElementById('my-name').textContent=myName;
 }
 
@@ -1636,16 +1698,16 @@ function renderTable(){
       {v:'Other',                    d:'Any other reason'},
     ];
     const notesCell=`<td style="vertical-align:top;padding:6px 8px;min-width:140px">
-      ${notes?`<div class="note-chip" style="font-size:10px;color:${nc.color};background:${nc.bg};border:0.5px solid ${nc.border};border-radius:4px;padding:3px 6px;margin-bottom:4px;line-height:1.4;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:4px"
-        onclick="editNote('${p.id}',this,'${notes.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')" title="Click to edit">
-        <span>${notes}</span><span style="font-size:9px;opacity:.6">✏</span>
+      ${notes?`<div class="note-chip" style="font-size:10px;color:${nc.color};background:${nc.bg};border:0.5px solid ${nc.border};border-radius:4px;padding:3px 6px;margin-bottom:4px;line-height:1.4;cursor:${canEdit()?'pointer':'default'};display:flex;align-items:center;justify-content:space-between;gap:4px"
+        ${canEdit()?`onclick="editNote('${p.id}',this,'${notes.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')" title="Click to edit"`:''}>`
+        +`<span>${notes}</span>${canEdit()?'<span style="font-size:9px;opacity:.6">✏</span>':''}
       </div>`:''}
-      <select onchange="saveNote('${p.id}',this.value,this)" style="font-size:10px;padding:3px 6px;border:0.5px solid var(--border);border-radius:4px;background:#fff;color:var(--text2);width:100%;cursor:pointer">
+      ${canEdit()?`<select onchange="saveNote('${p.id}',this.value,this)" style="font-size:10px;padding:3px 6px;border:0.5px solid var(--border);border-radius:4px;background:#fff;color:var(--text2);width:100%;cursor:pointer">
         <option value="">${notes?'Change note…':'+ Add note…'}</option>
         ${noteOptions.map(o=>`<option value="${o.v}" title="${o.d}">${o.v}</option>`).join('')}
         <option value="__custom__">Custom…</option>
         ${notes?`<option value="__clear__">✕ Clear note</option>`:''}
-      </select>
+      </select>`:''}
     </td>`;
 
     let pdfCell;
@@ -1655,16 +1717,17 @@ function renderTable(){
       pdfCell=`<td style="vertical-align:top;padding:6px 8px;text-align:center">
         <span class="pdf-yes">✓ Downloaded</span>
         ${who?`<div class="dl-who">by ${who}${when?' · '+when:''}</div>`:''}
-        <button class="dl-btn dl-btn-yes" onclick="toggleDl('${p.id}',false)" style="margin-top:4px">↩ Revert</button>
+        ${canEdit()?`<button class="dl-btn dl-btn-yes" onclick="toggleDl('${p.id}',false)" style="margin-top:4px">↩ Revert</button>`:''}
         ${pathBtn}
       </td>`;
     } else {
       const doiLink=doi?`<a href="https://doi.org/${doi}" onclick="event.preventDefault();window.open('https://doi.org/${doi}','_blank','noopener,noreferrer,width=1200,height=800')" style="font-size:10px;color:var(--blue-t);display:block;margin-top:3px">Open via DOI →</a>`:'';
       const pubLink=String(p.pubmed_link||'').trim();
-      const pmLink=pubLink?`<a href="${pubLink}" onclick="event.preventDefault();window.open('${pubLink}','_blank','noopener,noreferrer,width=1200,height=800')" style="font-size:10px;color:var(--text2);display:block">PubMed →</a>`:'';      pdfCell=`<td style="vertical-align:top;padding:6px 8px;text-align:center">
+      const pmLink=pubLink?`<a href="${pubLink}" onclick="event.preventDefault();window.open('${pubLink}','_blank','noopener,noreferrer,width=1200,height=800')" style="font-size:10px;color:var(--text2);display:block">PubMed →</a>`:'';
+      pdfCell=`<td style="vertical-align:top;padding:6px 8px;text-align:center">
         <span class="pdf-paywall">🔒 Paywalled</span>
         ${doiLink}${pmLink}
-        <button class="dl-btn dl-btn-no" onclick="toggleDl('${p.id}',true)" style="margin-top:4px">✓ Mark downloaded</button>
+        ${canEdit()?`<button class="dl-btn dl-btn-no" onclick="toggleDl('${p.id}',true)" style="margin-top:4px">✓ Mark downloaded</button>`:''}
         ${pathBtn}
       </td>`;
     }
@@ -1675,10 +1738,10 @@ function renderTable(){
         <div style="font-size:11px;color:var(--text);line-height:1.4;margin-bottom:2px">${titleS}</div>
         <div style="display:flex;align-items:center;gap:4px;margin-top:2px">
           <span style="font-size:10px;color:var(--text3)">${p.year||'—'}</span>
-          <button class="dl-btn" onclick="copyTitle('${title.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')}',this)"
+          ${canEdit()?`<button class="dl-btn" onclick="copyTitle('${title.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')}',this)"
             style="font-size:9px;padding:2px 5px;background:var(--bg2);color:var(--text3);border-color:var(--border)">
             📋 Copy title
-          </button>
+          </button>`:''}
         </div>
       </td>
       ${cell(raw(`<strong>${p.study_type||'—'}</strong>`),p._s1,30,'dp-study')}
@@ -2130,6 +2193,7 @@ async function deleteFile(filename, btn){
 }
 
 function gotoTab(t){
+  if((t==='upload'||t==='activity')&&!isAdmin()) return;
   const names=['papers','upload','activity'];
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',names[i]===t));
   document.querySelectorAll('.tab-panel').forEach((el,i)=>el.classList.toggle('active',el.id===`tab-${t}`));
