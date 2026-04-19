@@ -336,7 +336,7 @@ tr:hover td{background:#fafaf8}
           </div>
         </div>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center" id="src-chips"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:flex-start;max-height:120px;overflow-y:auto;padding-right:4px" id="src-chips"></div>
       <div class="tier-chips">
         <span class="tchip c-all" data-tier="ALL" onclick="setTier('ALL')">All</span>
         <span class="tchip c-t1" data-tier="Tier 1" onclick="setTier('Tier 1')">Tier 1</span>
@@ -346,8 +346,24 @@ tr:hover td{background:#fafaf8}
       </div>
       <div class="controls">
         <input class="search-box" id="search-input" placeholder="Search title, journal, type…" oninput="onSearch()">
+        <select id="domain-filter" onchange="onDomainFilter()" style="padding:7px 8px;font-size:12px;border:0.5px solid var(--border);border-radius:6px;background:#fff;max-width:180px">
+          <option value="">All domains</option>
+        </select>
+        <select id="journal-filter" onchange="onJournalFilter()" style="padding:7px 8px;font-size:12px;border:0.5px solid var(--border);border-radius:6px;background:#fff;max-width:200px">
+          <option value="">All journals</option>
+        </select>
         <input type="number" id="yr-from" placeholder="Year from" style="width:90px;padding:7px 8px;font-size:12px;border:0.5px solid var(--border);border-radius:6px" oninput="onYr()">
         <input type="number" id="yr-to" placeholder="Year to" style="width:80px;padding:7px 8px;font-size:12px;border:0.5px solid var(--border);border-radius:6px" oninput="onYr()">
+        <select id="note-filter" onchange="onNoteFilter()" style="padding:7px 8px;font-size:12px;border:0.5px solid var(--border);border-radius:6px;background:#fff;max-width:180px">
+          <option value="">All notes</option>
+          <option value="__any__">Has any note</option>
+          <option value="__none__">No note</option>
+          <option value="Paywalled - no access">🟠 Paywalled - no access</option>
+          <option value="Institutional access needed">🔵 Institutional access needed</option>
+          <option value="Abstract only">🟣 Abstract only</option>
+          <option value="Not found online">🔴 Not found online</option>
+          <option value="Other">⚪ Other</option>
+        </select>
         <select id="sort-sel" onchange="onSort()" style="padding:7px 8px;font-size:12px;border:0.5px solid var(--border);border-radius:6px;background:#fff">
           <option value="_total:-1">Score ↓</option>
           <option value="_total:1">Score ↑</option>
@@ -357,6 +373,22 @@ tr:hover td{background:#fafaf8}
           <option value="pdf_saved:-1">Downloaded first</option>
         </select>
         <span style="font-size:12px;color:var(--text2)" id="cnt-lbl">0 articles</span>
+      </div>
+
+      <!-- Sub-domain dashboard -->
+      <div style="margin-bottom:12px">
+        <button class="btn" onclick="toggleSubDash()" style="font-size:11px;gap:5px">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="4" height="4" rx="1"/><rect x="7" y="1" width="4" height="4" rx="1"/><rect x="1" y="7" width="4" height="4" rx="1"/><rect x="7" y="7" width="4" height="4" rx="1"/></svg>
+          Sub-domain coverage
+          <span id="subdash-chevron" style="font-size:10px;transition:transform .2s">▼</span>
+        </button>
+        <div id="subdash-body" style="display:none;margin-top:8px;border:0.5px solid var(--border);border-radius:var(--rl);background:#fff;overflow:hidden">
+          <div style="padding:8px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--text2)">Filter by domain:</span>
+            <div id="subdash-domain-chips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+          </div>
+          <div id="subdash-table" style="padding:12px 14px;max-height:480px;overflow-y:auto"></div>
+        </div>
       </div>
       <div class="tbl-wrap">
         <table>
@@ -379,19 +411,13 @@ tr:hover td{background:#fafaf8}
             <th style="position:relative">
               Notes
               <span onclick="event.stopPropagation();toggleNotesLegend()" style="font-size:9px;background:var(--bg2);border:0.5px solid var(--border);padding:1px 4px;border-radius:3px;margin-left:4px;cursor:pointer;vertical-align:middle">ⓘ</span>
-              <div id="notes-legend" style="display:none;position:absolute;top:calc(100% + 4px);right:0;width:280px;background:#fff;border:0.5px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);padding:10px 12px;z-index:100;font-weight:400;text-align:left;cursor:default" onclick="event.stopPropagation()">
+              <div id="notes-legend" style="display:none;position:absolute;top:calc(100% + 4px);right:0;width:260px;max-height:280px;overflow-y:auto;background:#fff;border:0.5px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);padding:10px 12px;z-index:100;font-weight:400;text-align:left;cursor:default" onclick="event.stopPropagation()">
                 <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:8px">Notes legend</div>
-                ${[
-                  ['Paywalled - no access','Behind a paywall with no institutional access. Team should try downloading manually via DOI or PubMed.'],
-                  ['Institutional access needed','May be accessible through your institution\'s library subscription. Check with your librarian.'],
-                  ['Abstract only','Only the abstract is publicly available — the full text cannot be obtained freely online.'],
-                  ['Not found online','Cannot be found anywhere online. May be a very old paper or a citation error.'],
-                  ['Other','Any other reason not covered above.'],
-                ].map(([t,d])=>`
-                  <div style="margin-bottom:7px">
-                    <div style="font-size:10px;font-weight:500;color:var(--text)">${t}</div>
-                    <div style="font-size:10px;color:var(--text2);line-height:1.4">${d}</div>
-                  </div>`).join('')}
+                <div style="margin-bottom:7px"><div style="font-size:10px;font-weight:500;color:var(--text)">Paywalled - no access</div><div style="font-size:10px;color:var(--text2);line-height:1.4">Behind a paywall with no institutional access. Try downloading manually via DOI or PubMed.</div></div>
+                <div style="margin-bottom:7px"><div style="font-size:10px;font-weight:500;color:var(--text)">Institutional access needed</div><div style="font-size:10px;color:var(--text2);line-height:1.4">May be accessible through your institution's library subscription.</div></div>
+                <div style="margin-bottom:7px"><div style="font-size:10px;font-weight:500;color:var(--text)">Abstract only</div><div style="font-size:10px;color:var(--text2);line-height:1.4">Only the abstract is publicly available — full text cannot be obtained freely online.</div></div>
+                <div style="margin-bottom:7px"><div style="font-size:10px;font-weight:500;color:var(--text)">Not found online</div><div style="font-size:10px;color:var(--text2);line-height:1.4">Cannot be found anywhere online. May be a very old paper or a citation error.</div></div>
+                <div style="margin-bottom:7px"><div style="font-size:10px;font-weight:500;color:var(--text)">Other</div><div style="font-size:10px;color:var(--text2);line-height:1.4">Any other reason not covered above.</div></div>
               </div>
             </th>
           </tr></thead>
@@ -493,7 +519,7 @@ const AV_COLORS=['#185FA5','#0F6E56','#BA7517','#534AB7','#993556','#D85A30','#3
 // ── State ──────────────────────────────────────────────────
 let papers=[],filtered=[];
 let tier='ALL',selectedSources=new Set(['ALL']),q='',sortCol='_total',sortDir=-1,page=1;
-let yf=null,yt=null;
+let yf=null,yt=null,journalFilter='',noteFilter='',domainFilter='';
 let actLog=[];
 let presenceCh=null;
 
@@ -545,7 +571,10 @@ if(myName){
   document.addEventListener('DOMContentLoaded', ()=>{ loadPapers(); subscribeRealtime(); loadActivity(); });
 }
 
-document.getElementById('auth-name').addEventListener('keydown', e=>{ if(e.key==='Enter') doAuth(); });
+document.addEventListener('DOMContentLoaded', ()=>{
+  const nameInput = document.getElementById('auth-name');
+  if(nameInput) nameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') doAuth(); });
+});
 
 function initApp(){
   document.getElementById('auth-view').style.display='none';
@@ -617,28 +646,737 @@ async function loadPapers(){
 
 // ── Scoring ────────────────────────────────────────────────
 const IF_MAP={
-  "the new england journal of medicine":176.1,"nejm":176.1,
-  "the lancet":168.9,"lancet":168.9,"lancet (london, england)":168.9,
-  "jama":120.7,"nature medicine":82.9,"jama network open":13.8,
-  "circulation":37.8,"european heart journal":39.3,
+  "ca: a cancer journal for clinicians":227.365,
+  "the new england journal of medicine":176.1,
+  "nejm":176.1,
+  "the lancet":168.9,
+  "lancet":168.9,
+  "lancet (london, england)":168.9,
+  "jama":120.7,
+  "nature medicine":82.9,
+  "european heart journal":39.3,
+  "circulation":37.8,
+  "chemical society reviews":34.203,
   "journal of the american college of cardiology":24.0,
-  "jama cardiology":18.0,"heart":6.1,"heart (british cardiac society)":6.1,
-  "american heart journal":4.5,"international journal of cardiology":3.5,
-  "journal of the american heart association":5.0,
-  "jacc: cardiovascular interventions":10.2,"jacc. cardiovascular interventions":10.2,
-  "eurointervention":7.4,"eurointervention : journal of europcr in collaboration with the working group on interventional cardiology of the european society of cardiology":7.4,
-  "circulation. cardiovascular interventions":4.6,"circulation: cardiovascular interventions":4.6,
-  "catheterization and cardiovascular interventions":2.8,"catheterization and cardiovascular interventions : official journal of the society for cardiac angiography & interventions":2.8,
-  "jacc. cardiovascular imaging":12.8,"jacc: cardiovascular imaging":12.8,
-  "european heart journal. cardiovascular imaging":7.8,"european heart journal - cardiovascular imaging":7.8,
-  "circulation. cardiovascular imaging":7.0,"circulation: cardiovascular imaging":7.0,
-  "journal of cardiovascular computed tomography":5.1,
-  "jacc. heart failure":6.1,"jacc: heart failure":6.1,
+  "cell metabolism":23.84,
+  "jama cardiology":18.0,
+  "annual review of biochemistry":17.677,
+  "advances in colloid and interface science":17.206,
   "european journal of heart failure":16.9,
-  "radiology":12.1,"european radiology":4.7,
-  "cardiovascular diabetology":8.5,"atherosclerosis":4.9,
-  "scientific reports":3.8,"bmc cardiovascular disorders":2.3,
-  "frontiers in cardiovascular medicine":2.8,"open heart":2.8,
+  "annual review of pathology":16.289,
+  "clinical microbiology reviews":14.71,
+  "ageing research reviews":13.914,
+  "jama network open":13.8,
+  "acs nano":13.51,
+  "jacc. cardiovascular imaging":12.8,
+  "jacc: cardiovascular imaging":12.8,
+  "radiology":12.1,
+  "advanced drug delivery reviews":11.979,
+  "biomarker research":11.944,
+  "annual review of biomedical engineering":11.458,
+  "annual review of neuroscience":11.098,
+  "jacc: cardiovascular interventions":10.2,
+  "jacc. cardiovascular interventions":10.2,
+  "cancer metastasis reviews":10.098,
+  "cell reports. medicine":9.938,
+  "carbohydrate polymers":9.922,
+  "annual review of physiology":9.804,
+  "acta neuropathologica":9.578,
+  "biomaterials":9.526,
+  "biotechnology advances":9.496,
+  "bioactive materials":9.448,
+  "burns & trauma":9.297,
+  "annual review of food science and technology":9.1,
+  "biosensors & bioelectronics":9.08,
+  "biosensors":9.08,
+  "biological reviews of the cambridge philosophical society":8.948,
+  "cellular & molecular biology letters":8.759,
+  "cell death discovery":8.759,
+  "annual review of nutrition":8.744,
+  "acs sensors":8.714,
+  "annual review of biomedical data science":8.623,
+  "cardiovascular diabetology":8.5,
+  "cancer letters":8.467,
+  "chemosphere":8.323,
+  "cell death and differentiation":8.255,
+  "annual review of pharmacology and toxicology":8.016,
+  "alzheimer's research & therapy":7.924,
+  "european heart journal. cardiovascular imaging":7.8,
+  "european heart journal - cardiovascular imaging":7.8,
+  "basic research in cardiology":7.743,
+  "acta pharmaceutica sinica. b":7.663,
+  "cell death & disease":7.645,
+  "archivum immunologiae et therapiae experimentalis":7.557,
+  "clinical psychology review":7.532,
+  "cancer treatment reviews":7.51,
+  "eurointervention":7.4,
+  "eurointervention : journal of europcr in collaboration with the working group on interventional cardiology of the european society of cardiology":7.4,
+  "biotechnology for biofuels and bioproducts":7.314,
+  "acta biomaterialia":7.304,
+  "artificial intelligence in medicine":7.291,
+  "archives of toxicology":7.197,
+  "acs central science":7.167,
+  "american journal of clinical dermatology":7.162,
+  "angiogenesis":7.007,
+  "circulation. cardiovascular imaging":7.0,
+  "circulation: cardiovascular imaging":7.0,
+  "cell reports":6.879,
+  "blood cancer journal":6.663,
+  "clinical reviews in allergy & immunology":6.63,
+  "annual review of medicine":6.534,
+  "acta pharmacologica sinica":6.516,
+  "advanced healthcare materials":6.467,
+  "autophagy":6.318,
+  "autoimmunity reviews":6.295,
+  "bioelectronic medicine":6.271,
+  "bmc medicine":6.209,
+  "british medical bulletin":6.167,
+  "heart":6.1,
+  "heart (british cardiac society)":6.1,
+  "jacc. heart failure":6.1,
+  "jacc: heart failure":6.1,
+  "biophysics reviews":6.049,
+  "archives of pharmacal research":6.031,
+  "biochimica et biophysica acta. reviews on cancer":6.002,
+  "cancer biology & therapy":5.986,
+  "cns drugs":5.904,
+  "biotechnology journal":5.827,
+  "annals of intensive care":5.792,
+  "biology":5.775,
+  "briefings in bioinformatics":5.654,
+  "annals of translational medicine":5.567,
+  "british journal of cancer":5.544,
+  "clinical and translational medicine":5.451,
+  "bmc medical informatics and decision making":5.388,
+  "biomaterials and biosystems":5.348,
+  "chinese medicine":5.296,
+  "cell insight":5.267,
+  "communications biology":5.175,
+  "blood reviews":5.124,
+  "journal of cardiovascular computed tomography":5.1,
+  "cells":5.095,
+  "cancer cell international":5.092,
+  "ajnr. american journal of neuroradiology":5.075,
+  "acs biomaterials science & engineering":5.067,
+  "cell & bioscience":5.055,
+  "journal of the american heart association":5.0,
+  "cardiovascular digital health journal":5.0,
+  "aging cell":4.996,
+  "biochemical society transactions":4.981,
+  "bmc biology":4.973,
+  "british journal of sports medicine":4.947,
+  "cns neuroscience & therapeutics":4.929,
+  "clinical and molecular hepatology":4.927,
+  "atherosclerosis":4.9,
+  "circulation. arrhythmia and electrophysiology":4.894,
+  "biomolecules":4.885,
+  "biomacromolecules":4.871,
+  "computational and structural biotechnology journal":4.791,
+  "computer methods and programs in biomedicine":4.77,
+  "brain, behavior, and immunity":4.716,
+  "european radiology":4.7,
+  "cell proliferation":4.638,
+  "biodata mining":4.636,
+  "analytica chimica acta":4.631,
+  "clinical epigenetics":4.623,
+  "acs applied bio materials":4.621,
+  "antioxidants & redox signaling":4.604,
+  "circulation. cardiovascular interventions":4.6,
+  "circulation: cardiovascular interventions":4.6,
+  "aging and disease":4.583,
+  "communications medicine":4.583,
+  "apl bioengineering":4.57,
+  "cancer immunology, immunotherapy : cii":4.558,
+  "cellular and molecular neurobiology":4.532,
+  "cancer & metabolism":4.52,
+  "bmj evidence-based medicine":4.514,
+  "biomaterials science":4.513,
+  "cardiovascular research":4.503,
+  "american heart journal":4.5,
+  "aging clinical and experimental research":4.483,
+  "biomaterials advances":4.458,
+  "cell stress & chaperones":4.454,
+  "american journal of hematology":4.438,
+  "cancer biology & medicine":4.417,
+  "best practice & research. clinical rheumatology":4.413,
+  "colloids and surfaces. b, biointerfaces":4.41,
+  "biomedical engineering online":4.387,
+  "circulation. cardiovascular quality and outcomes":4.377,
+  "blood advances":4.358,
+  "biology direct":4.332,
+  "clinical endocrinology":4.295,
+  "aaps pharmscitech":4.283,
+  "annals of neurology":4.238,
+  "clinical and experimental medicine":4.204,
+  "bmc nursing":4.188,
+  "chemico-biological interactions":4.154,
+  "annals of surgery":4.142,
+  "arthritis research & therapy":4.134,
+  "bmc plant biology":4.129,
+  "a&a practice":4.111,
+  "cancers":4.104,
+  "bmc medical research methodology":4.094,
+  "circulation research":4.09,
+  "best practice & research. clinical obstetrics & gynaecology":4.076,
+  "advances in wound care":4.041,
+  "biology of sex differences":4.025,
+  "annals of medicine":4.0,
+  "annals of internal medicine":4.0,
+  "bmj mental health":3.996,
+  "bmc medical education":3.961,
+  "bmj oncology":3.953,
+  "admet & dmpk":3.949,
+  "amino acids":3.942,
+  "biochimica et biophysica acta. molecular basis of disease":3.938,
+  "american journal of physiology. cell physiology":3.919,
+  "biomedicines":3.913,
+  "bmj open diabetes research & care":3.911,
+  "biochemical pharmacology":3.909,
+  "british journal of pharmacology":3.891,
+  "clinical and translational science":3.871,
+  "circulation. heart failure":3.867,
+  "archives of gerontology and geriatrics":3.837,
+  "acta biochimica polonica":3.833,
+  "bmj health & care informatics":3.821,
+  "antimicrobial resistance and infection control":3.816,
+  "acs omega":3.806,
+  "scientific reports":3.8,
+  "bioorganic chemistry":3.792,
+  "bmc public health":3.778,
+  "cardiac failure review":3.774,
+  "cell biochemistry and function":3.764,
+  "circulation. genomic and precision medicine":3.751,
+  "bjc reports":3.742,
+  "clinical pharmacokinetics":3.684,
+  "bmc genomics":3.664,
+  "bmj global health":3.641,
+  "clinical proteomics":3.626,
+  "bioengineering & translational medicine":3.623,
+  "cancer":3.61,
+  "bmc psychiatry":3.601,
+  "cancer science":3.591,
+  "cold spring harbor perspectives in medicine":3.582,
+  "bmc microbiology":3.573,
+  "clinical epidemiology":3.519,
+  "acs pharmacology & translational science":3.517,
+  "chinese medical journal":3.506,
+  "international journal of cardiology":3.5,
+  "anaesthesia":3.5,
+  "british journal of anaesthesia":3.5,
+  "bdj open":3.496,
+  "british dental journal":3.496,
+  "bmc complementary medicine and therapies":3.466,
+  "advances in therapy":3.463,
+  "brain communications":3.457,
+  "clinical & experimental metastasis":3.42,
+  "antimicrobial agents and chemotherapy":3.405,
+  "cardiology and therapy":3.396,
+  "bmc medical imaging":3.387,
+  "bmc geriatrics":3.385,
+  "applied and environmental microbiology":3.379,
+  "biogerontology":3.365,
+  "cellular signalling":3.363,
+  "bmb reports":3.357,
+  "bmc medical ethics":3.341,
+  "biomicrofluidics":3.329,
+  "biochimica et biophysica acta. molecular cell research":3.316,
+  "clinical oral investigations":3.312,
+  "archives of microbiology":3.312,
+  "acs chemical neuroscience":3.257,
+  "bmc cancer":3.246,
+  "bjs open":3.24,
+  "bmc oral health":3.226,
+  "alimentary pharmacology & therapeutics":3.222,
+  "chemical research in toxicology":3.219,
+  "appetite":3.14,
+  "biology methods & protocols":3.137,
+  "advances in ophthalmology practice and research":3.13,
+  "cell transplantation":3.126,
+  "cognitive neurodynamics":3.119,
+  "cellular and molecular gastroenterology and hepatology":3.099,
+  "clinical kidney journal":3.096,
+  "bmc health services research":3.095,
+  "cardiovascular toxicology":3.092,
+  "cancer medicine":3.087,
+  "biophysical reviews":3.076,
+  "biomedical engineering letters":3.074,
+  "clinical hematology international":3.06,
+  "bmc women's health":3.057,
+  "best practice & research. clinical endocrinology & metabolism":3.045,
+  "biological procedures online":3.028,
+  "cell biochemistry and biophysics":3.002,
+  "american journal of physiology. endocrinology and metabolism":2.978,
+  "clinical implant dentistry and related research":2.961,
+  "acta psychiatrica scandinavica":2.959,
+  "aging":2.958,
+  "cell calcium":2.955,
+  "biological trace element research":2.95,
+  "best practice & research. clinical haematology":2.943,
+  "annals of clinical and translational neurology":2.935,
+  "bmc endocrine disorders":2.9,
+  "american journal of ophthalmology":2.896,
+  "annals of the new york academy of sciences":2.879,
+  "clinical interventions in aging":2.866,
+  "analytical biochemistry":2.864,
+  "aims neuroscience":2.863,
+  "clinical oral implants research":2.838,
+  "brain research bulletin":2.836,
+  "american journal of physiology. lung cellular and molecular physiology":2.836,
+  "circulation journal : official journal of the japanese circulation society":2.835,
+  "american journal of physiology. renal physiology":2.831,
+  "bmj open gastroenterology":2.816,
+  "cardiorenal medicine":2.807,
+  "bmc primary care":2.803,
+  "catheterization and cardiovascular interventions":2.8,
+  "catheterization and cardiovascular interventions : official journal of the society for cardiac angiography & interventions":2.8,
+  "frontiers in cardiovascular medicine":2.8,
+  "open heart":2.8,
+  "annals of cardiothoracic surgery":2.787,
+  "cancer research and treatment":2.774,
+  "breast cancer research and treatment":2.774,
+  "bone & joint research":2.771,
+  "bioconjugate chemistry":2.771,
+  "cell biology international":2.76,
+  "bmc immunology":2.758,
+  "brain, behavior, & immunity - health":2.746,
+  "analytical science advances":2.735,
+  "complementary therapies in medicine":2.725,
+  "comparative biochemistry and physiology. toxicology & pharmacology : cbp":2.713,
+  "academic radiology":2.699,
+  "bmj open sport & exercise medicine":2.696,
+  "biochimica et biophysica acta. gene regulatory mechanisms":2.692,
+  "arthritis and rheumatism":2.691,
+  "arteriosclerosis, thrombosis, and vascular biology":2.661,
+  "bone marrow transplantation":2.661,
+  "brain research":2.648,
+  "asian journal of psychiatry":2.647,
+  "biochemia medica":2.645,
+  "annals of botany":2.636,
+  "chemical biology & drug design":2.625,
+  "biomedical reports":2.619,
+  "acta obstetricia et gynecologica scandinavica":2.615,
+  "american journal of physiology. heart and circulatory physiology":2.613,
+  "acta psychologica":2.604,
+  "bmc medical genomics":2.599,
+  "complementary therapies in clinical practice":2.594,
+  "aesthetic surgery journal":2.591,
+  "bmc emergency medicine":2.574,
+  "3 biotech":2.574,
+  "bmc infectious diseases":2.566,
+  "clinical chemistry and laboratory medicine":2.548,
+  "biochimie":2.545,
+  "applied biochemistry and biotechnology":2.538,
+  "arrhythmia & electrophysiology review":2.528,
+  "calcified tissue international":2.524,
+  "bmc pulmonary medicine":2.509,
+  "bmc pharmacology & toxicology":2.508,
+  "chemmedchem":2.505,
+  "anesthesia and analgesia":2.497,
+  "clinics and practice":2.494,
+  "acta diabetologica":2.492,
+  "bmc musculoskeletal disorders":2.482,
+  "archives of gynecology and obstetrics":2.481,
+  "computational biology and chemistry":2.48,
+  "advances in respiratory medicine":2.477,
+  "biochimica et biophysica acta. general subjects":2.463,
+  "bmc sports science, medicine & rehabilitation":2.463,
+  "bmc nutrition":2.461,
+  "bmj open ophthalmology":2.442,
+  "bmj open respiratory research":2.441,
+  "bmc pregnancy and childbirth":2.435,
+  "cerebrovascular diseases extra":2.431,
+  "behavioural brain research":2.417,
+  "bone & joint open":2.416,
+  "addiction & health":2.414,
+  "american journal of preventive medicine":2.398,
+  "brain circulation":2.396,
+  "best practice & research. clinical gastroenterology":2.387,
+  "clinical liver disease":2.385,
+  "american journal of physiology. gastrointestinal and liver physiology":2.372,
+  "chemistry & biodiversity":2.362,
+  "cardiovascular intervention and therapeutics":2.361,
+  "annals of palliative medicine":2.36,
+  "archives of medical research":2.354,
+  "arthritis care & research":2.353,
+  "bioscience reports":2.336,
+  "american journal of epidemiology":2.335,
+  "cardiovascular drugs and therapy":2.334,
+  "applied health economics and health policy":2.333,
+  "bmj neurology open":2.331,
+  "bmc gastroenterology":2.33,
+  "cannabis and cannabinoid research":2.318,
+  "advances in kidney disease and health":2.312,
+  "bmc cardiovascular disorders":2.3,
+  "american journal of cancer research":2.299,
+  "cardiovascular endocrinology & metabolism":2.298,
+  "bmc anesthesiology":2.286,
+  "bmc nephrology":2.283,
+  "british journal of haematology":2.278,
+  "clinical and experimental dental research":2.274,
+  "brain structure & function":2.264,
+  "anesthesiology":2.254,
+  "cleveland clinic journal of medicine":2.244,
+  "annals of biomedical engineering":2.218,
+  "clinical obesity":2.208,
+  "biomolecules & biomedicine":2.199,
+  "cardiovascular diagnosis and therapy":2.197,
+  "bmc neurology":2.196,
+  "clinical autonomic research : official journal of the clinical autonomic research society":2.187,
+  "annals of geriatric medicine and research":2.182,
+  "clocks & sleep":2.175,
+  "annals of coloproctology":2.175,
+  "clinical drug investigation":2.167,
+  "bone":2.163,
+  "archives of osteoporosis":2.156,
+  "archives of orthopaedic and trauma surgery":2.148,
+  "basic & clinical pharmacology & toxicology":2.141,
+  "biochemical and biophysical research communications":2.135,
+  "cardiovascular engineering and technology":2.129,
+  "acta tropica":2.125,
+  "antonie van leeuwenhoek":2.12,
+  "annals of the american thoracic society":2.118,
+  "arthroscopy, sports medicine, and rehabilitation":2.1,
+  "clinical cardiology":2.099,
+  "biochemistry":2.097,
+  "biochimica et biophysica acta. biomembranes":2.096,
+  "biochimica et biophysica acta":2.096,
+  "addiction biology":2.079,
+  "archives of pathology & laboratory medicine":2.075,
+  "best practice & research. clinical anaesthesiology":2.073,
+  "comprehensive physiology":2.069,
+  "clinical genitourinary cancer":2.065,
+  "clinical & experimental ophthalmology":2.061,
+  "adipocyte":2.052,
+  "clinics in orthopedic surgery":2.041,
+  "acta neurochirurgica":2.04,
+  "comparative biochemistry and physiology. part a, molecular & integrative physiology":2.039,
+  "bmc pediatrics":2.037,
+  "acta neuropsychiatrica":2.034,
+  "clinical hemorheology and microcirculation":2.033,
+  "asian journal of andrology":2.027,
+  "american journal of obstetrics & gynecology mfm":2.026,
+  "clinical psychology & psychotherapy":2.022,
+  "bmc urology":2.018,
+  "animal models and experimental medicine":2.015,
+  "clinical therapeutics":2.014,
+  "chinese journal of integrative medicine":2.011,
+  "cardiology plus":2.0,
+  "advances in medical sciences":1.993,
+  "brain and behavior":1.991,
+  "clinics in perinatology":1.984,
+  "age and ageing":1.974,
+  "bmj open":1.973,
+  "british medical journal":1.973,
+  "autonomic neuroscience : basic & clinical":1.966,
+  "cancer chemotherapy and pharmacology":1.96,
+  "clinical neuroradiology":1.957,
+  "cns & neurological disorders drug targets":1.955,
+  "advances in anatomic pathology":1.953,
+  "clinical and experimental nephrology":1.95,
+  "acta dermato-venereologica":1.945,
+  "american journal of neurodegenerative disease":1.941,
+  "clinical, cosmetic and investigational dermatology":1.935,
+  "clinical breast cancer":1.928,
+  "aging & mental health":1.928,
+  "advances in physiology education":1.926,
+  "clinical hypertension":1.924,
+  "ajr. american journal of roentgenology":1.919,
+  "american journal of men's health":1.911,
+  "cancer treatment and research":1.907,
+  "clinical and translational radiation oncology":1.906,
+  "british journal of health psychology":1.898,
+  "clinical and experimental immunology":1.891,
+  "acute medicine & surgery":1.881,
+  "aids and behavior":1.869,
+  "chemistry and physics of lipids":1.867,
+  "annals of nuclear medicine":1.866,
+  "anesthesia and pain medicine":1.861,
+  "british journal of clinical pharmacology":1.861,
+  "brain imaging and behavior":1.859,
+  "archives of oral biology":1.855,
+  "clinical endoscopy":1.855,
+  "clinical lung cancer":1.851,
+  "american journal of hypertension":1.833,
+  "clinical and translational gastroenterology":1.83,
+  "chonnam medical journal":1.818,
+  "biotechnology letters":1.812,
+  "chronobiology international":1.806,
+  "clinical medicine insights. endocrinology and diabetes":1.805,
+  "asn neuro":1.804,
+  "canadian journal of physiology and pharmacology":1.796,
+  "cardiovascular and interventional radiology":1.793,
+  "ajog global reports":1.791,
+  "american journal of nephrology":1.79,
+  "advances in experimental medicine and biology":1.776,
+  "annals of human biology":1.771,
+  "bmj nutrition, prevention & health":1.767,
+  "bmj open quality":1.766,
+  "community dentistry and oral epidemiology":1.765,
+  "amyotrophic lateral sclerosis & frontotemporal degeneration":1.764,
+  "bioengineered":1.762,
+  "bmc surgery":1.761,
+  "clinical imaging":1.743,
+  "cardiovascular therapeutics":1.739,
+  "bmc ophthalmology":1.728,
+  "cancer investigation":1.723,
+  "clinical neurology and neurosurgery":1.722,
+  "bmc rheumatology":1.721,
+  "biomarkers in medicine":1.717,
+  "anti-cancer drugs":1.717,
+  "american journal of physiology. regulatory, integrative and comparative physiology":1.716,
+  "annals of hematology":1.716,
+  "clinics and research in hepatology and gastroenterology":1.715,
+  "asian nursing research":1.715,
+  "bmj public health":1.715,
+  "archives of disease in childhood":1.713,
+  "australian prescriber":1.705,
+  "american journal of preventive cardiology":1.705,
+  "aesthetic plastic surgery":1.703,
+  "clinical journal of gastroenterology":1.7,
+  "antiviral therapy":1.69,
+  "clinical rehabilitation":1.682,
+  "arthroplasty today":1.679,
+  "biological research for nursing":1.675,
+  "clinical rheumatology":1.672,
+  "biomarker insights":1.667,
+  "american journal of nuclear medicine and molecular imaging":1.654,
+  "comparative medicine":1.648,
+  "clinics in liver disease":1.637,
+  "archives of dermatological research":1.636,
+  "clinical and experimental pharmacology & physiology":1.636,
+  "clinical genetics":1.623,
+  "annals of nutrition & metabolism":1.616,
+  "acr open rheumatology":1.616,
+  "biochemical genetics":1.611,
+  "beneficial microbes":1.609,
+  "acta histochemica":1.602,
+  "archives of virology":1.599,
+  "biological research":1.599,
+  "acta anaesthesiologica scandinavica":1.588,
+  "annals of the royal college of surgeons of england":1.581,
+  "american journal of otolaryngology":1.578,
+  "balkan medical journal":1.573,
+  "cardiovascular ultrasound":1.571,
+  "cancer management and research":1.566,
+  "biochemistry and biophysics reports":1.559,
+  "american journal of lifestyle medicine":1.549,
+  "blood research":1.545,
+  "blood pressure":1.545,
+  "auris, nasus, larynx":1.541,
+  "clinical medicine insights. cardiology":1.537,
+  "american journal of surgery":1.536,
+  "chinese neurosurgical journal":1.526,
+  "clinical nuclear medicine":1.525,
+  "brain injury":1.523,
+  "annals of gastroenterology":1.51,
+  "advanced pharmaceutical bulletin":1.509,
+  "bmc research notes":1.508,
+  "american journal of medicine open":1.508,
+  "american journal of obstetrics and gynecology":1.499,
+  "biological & pharmaceutical bulletin":1.491,
+  "advances in protein chemistry and structural biology":1.488,
+  "annals of surgical oncology":1.486,
+  "annals of saudi medicine":1.485,
+  "belitung nursing journal":1.471,
+  "asian/pacific island nursing journal":1.465,
+  "annals of physical and rehabilitation medicine":1.464,
+  "clinical orthopaedics and related research":1.463,
+  "advances in clinical chemistry":1.462,
+  "brain stimulation":1.461,
+  "american journal of clinical and experimental urology":1.459,
+  "archives of endocrinology and metabolism":1.453,
+  "clinical biochemistry":1.451,
+  "american journal of primatology":1.447,
+  "angiology":1.432,
+  "anesthesiology and pain medicine":1.432,
+  "american journal of clinical and experimental immunology":1.426,
+  "advances in cancer research":1.424,
+  "acta haematologica":1.424,
+  "advances in radiation oncology":1.422,
+  "clinical nursing research":1.419,
+  "annals of neurosciences":1.408,
+  "anais brasileiros de dermatologia":1.407,
+  "atherosclerosis plus":1.402,
+  "cardiovascular & hematological agents in medicinal chemistry":1.4,
+  "cardiology research and practice":1.388,
+  "cardiology research":1.388,
+  "bipolar disorders":1.386,
+  "canadian journal of kidney health and disease":1.384,
+  "advances in surgery":1.38,
+  "acta microbiologica et immunologica hungarica":1.378,
+  "clinical nutrition research":1.358,
+  "clinical radiology":1.348,
+  "biomedizinische technik. biomedical engineering":1.347,
+  "clinical and experimental emergency medicine":1.335,
+  "clinical colorectal cancer":1.333,
+  "biological psychiatry":1.328,
+  "american journal of physical medicine & rehabilitation":1.328,
+  "combinatorial chemistry & high throughput screening":1.322,
+  "bioscience, biotechnology, and biochemistry":1.318,
+  "anaesthesiology intensive therapy":1.316,
+  "chemical & pharmaceutical bulletin":1.313,
+  "bjgp open":1.312,
+  "asian journal of urology":1.311,
+  "chronic diseases and translational medicine":1.3,
+  "cancer treatment and research communications":1.298,
+  "clinical transplantation":1.295,
+  "blood purification":1.293,
+  "bmj surgery, interventions, & health technologies":1.289,
+  "american journal of translational research":1.285,
+  "bmj supportive & palliative care":1.28,
+  "basic and clinical andrology":1.273,
+  "bjui compass":1.265,
+  "artificial life":1.254,
+  "biopharmaceutics & drug disposition":1.254,
+  "allergologia et immunopathologia":1.247,
+  "brain sciences":1.241,
+  "american journal of perinatology":1.24,
+  "archives of iranian medicine":1.238,
+  "archives of physiology and biochemistry":1.237,
+  "annals of plastic surgery":1.234,
+  "annals of family medicine":1.213,
+  "canadian journal of gastroenterology & hepatology":1.206,
+  "canadian journal of gastroenterology = journal canadien de gastroenterologie":1.206,
+  "clinical neurophysiology practice":1.204,
+  "cancer causes & control : ccc":1.184,
+  "annals of the academy of medicine, singapore":1.165,
+  "artificial organs":1.16,
+  "clinical transplantation and research":1.159,
+  "clinical medicine & research":1.152,
+  "american journal of clinical oncology":1.142,
+  "american heart journal plus : cardiology research and practice":1.135,
+  "clinical pharmacology in drug development":1.134,
+  "brazilian journal of otorhinolaryngology":1.133,
+  "advances in skin & wound care":1.128,
+  "annals of hepatology":1.128,
+  "blood vessels, thrombosis & hemostasis":1.126,
+  "circulation reports":1.122,
+  "acta neurologica belgica":1.121,
+  "anaesthesia, critical care & pain medicine":1.119,
+  "cardiology in review":1.117,
+  "american journal of medical genetics. part a":1.106,
+  "clinical neuropharmacology":1.1,
+  "acta neurobiologiae experimentalis":1.086,
+  "australian journal of general practice":1.085,
+  "biomedicine hub":1.08,
+  "clinical and experimental rheumatology":1.079,
+  "annals of epidemiology":1.073,
+  "clinical and translational imaging":1.07,
+  "brain & development":1.064,
+  "chinese clinical oncology":1.057,
+  "annals of the rheumatic diseases":1.054,
+  "canadian journal of surgery. journal canadien de chirurgie":1.04,
+  "arquivos de gastroenterologia":1.024,
+  "clinical chemistry":1.023,
+  "blood":1.02,
+  "clinical physiology and functional imaging":0.993,
+  "american journal of cardiovascular disease":0.989,
+  "acta clinica belgica":0.981,
+  "annals of vascular surgery":0.974,
+  "anales del sistema sanitario de navarra":0.968,
+  "cjc pediatric and congenital heart disease":0.957,
+  "brazilian journal of cardiovascular surgery":0.951,
+  "annals of clinical biochemistry":0.938,
+  "american journal of therapeutics":0.932,
+  "anatolian journal of cardiology":0.922,
+  "arquivos brasileiros de cardiologia":0.919,
+  "cardiovascular diabetology. endocrinology reports":0.909,
+  "clinics in geriatric medicine":0.898,
+  "australasian journal of ultrasound in medicine":0.898,
+  "annals of transplantation":0.897,
+  "clinical obstetrics and gynecology":0.89,
+  "academic pediatrics":0.888,
+  "biomed research international":0.885,
+  "annals of cardiac anaesthesia":0.884,
+  "asiaintervention":0.881,
+  "complementary medicine research":0.88,
+  "annals of nuclear cardiology":0.871,
+  "cardiology":0.867,
+  "cardiology journal":0.867,
+  "advances in computational intelligence":0.866,
+  "cjc open":0.865,
+  "cancer biotherapy & radiopharmaceuticals":0.862,
+  "asia-pacific journal of public health":0.859,
+  "clinics in laboratory medicine":0.849,
+  "american journal of respiratory and critical care medicine":0.843,
+  "aacn advanced critical care":0.841,
+  "andrologia":0.832,
+  "clinics in plastic surgery":0.828,
+  "asia-pacific journal of clinical oncology":0.821,
+  "british journal of neurosurgery":0.821,
+  "anesthesiology research and practice":0.812,
+  "blood pressure monitoring":0.791,
+  "archives of physical medicine and rehabilitation":0.788,
+  "anz journal of surgery":0.776,
+  "central european journal of public health":0.771,
+  "bjr open":0.767,
+  "advances in anesthesia":0.758,
+  "clinical nutrition espen":0.757,
+  "advanced emergency nursing journal":0.75,
+  "african journal of reproductive health":0.745,
+  "cardiology clinics":0.744,
+  "aids reviews":0.741,
+  "clinical pharmacology and therapeutics":0.741,
+  "advanced biomedical research":0.73,
+  "annals of pediatric cardiology":0.714,
+  "african health sciences":0.703,
+  "annali italiani di chirurgia":0.692,
+  "acta chirurgica belgica":0.689,
+  "anesthesiology clinics":0.665,
+  "advances in child development and behavior":0.662,
+  "cancer epidemiology":0.656,
+  "cardiology in the young":0.652,
+  "clinical and experimental hepatology":0.652,
+  "cardiac electrophysiology clinics":0.649,
+  "annals of emergency medicine":0.648,
+  "cardiovascular journal of africa":0.639,
+  "acta chirurgiae orthopaedicae et traumatologiae cechoslovaca":0.636,
+  "clinical nephrology":0.594,
+  "asian journal of neurosurgery":0.594,
+  "clinics in podiatric medicine and surgery":0.589,
+  "african journal of thoracic and critical care medicine":0.583,
+  "acta neurologica taiwanica":0.58,
+  "american journal of clinical pathology":0.577,
+  "asian cardiovascular & thoracic annals":0.564,
+  "anaesthesia and intensive care":0.557,
+  "acta orthopaedica belgica":0.556,
+  "antimicrobial stewardship & healthcare epidemiology : ashe":0.555,
+  "acta ophthalmologica":0.544,
+  "brazilian journal of physical therapy":0.538,
+  "acta neurologica scandinavica":0.531,
+  "chest":0.514,
+  "annals of vascular diseases":0.512,
+  "archives of razi institute":0.5,
+  "canadian journal of diabetes":0.498,
+  "bmj case reports":0.493,
+  "aerospace medicine and human performance":0.472,
+  "archives of cardiovascular diseases":0.439,
+  "acta medica (hradec kralove)":0.438,
+  "annals of thoracic surgery short reports":0.425,
+  "bjr case reports":0.417,
+  "aorn journal":0.408,
+  "avicenna journal of medicine":0.407,
+  "acta endocrinologica":0.391,
+  "acta anaesthesiologica belgica":0.354,
+  "circulation. population health and outcomes":0.344,
+  "bulletin du cancer":0.332,
+  "brain & spine":0.331,
+  "anesthesia progress":0.324,
+  "arxiv":0.323,
+  "asian journal of surgery":0.288,
+  "clinical lymphoma, myeloma & leukemia":0.274,
+  "annales d'endocrinologie":0.263,
+  "annales de biologie clinique":0.232,
+  "archivos argentinos de pediatria":0.224,
+  "advances in carbohydrate chemistry and biochemistry":0.158,
+  "aana journal":0.15,
+  "asian heart journal":0.139,
+  "aktuelle urologie":0.125,
+  "clinical physiology and biochemistry":0.098,
+  "acta clinica croatica":0.094,
+  "advances in dental research":0.091,
+  "archives des maladies du coeur et des vaisseaux":0.028,
+  "computational intelligence and neuroscience":0.016
 };
 const LM_NAMES=["FAME 1","FAME-1","FAME1","FAME 2","FAME-2","FAME2","FAME 3","FAME-3","FAME3",
   "FAST-FFR","FAST FFR","DEFINE-FLAIR","DEFINE FLAIR","DEFINE-GPS","DEFINE GPS",
@@ -718,6 +1456,12 @@ function applyFilters(){
     const yr=parseInt(p.year)||0;
     if(yf&&yr&&yr<yf)return false;
     if(yt&&yr&&yr>yt)return false;
+    if(domainFilter&&(p.domain||'').trim()!==domainFilter)return false;
+    if(journalFilter==='__none__'&&(p.journal||'').trim())return false;
+    if(journalFilter&&journalFilter!=='__none__'&&(p.journal||'').toLowerCase()!==journalFilter)return false;
+    if(noteFilter==='__any__'&&!p.team_notes)return false;
+    if(noteFilter==='__none__'&&p.team_notes)return false;
+    if(noteFilter&&noteFilter!=='__any__'&&noteFilter!=='__none__'&&p.team_notes!==noteFilter)return false;
     if(qlo&&![(p.full_title||''),(p.study_type||''),(p.journal||''),(p.domain||''),String(p.year||'')].some(v=>v.toLowerCase().includes(qlo)))return false;
     return true;
   });
@@ -762,7 +1506,7 @@ function exportCSV(){
   a.click();URL.revokeObjectURL(url);
 }
 
-function renderAll(){renderMetrics();renderSrcChips();renderTierChips();renderGaps();renderTable();renderPager();document.getElementById('cnt-lbl').textContent=`${filtered.length.toLocaleString()} articles`;}
+function renderAll(){renderMetrics();renderSrcChips();renderTierChips();renderGaps();renderDomainFilter();renderJournalFilter();renderSubDash();renderTable();renderPager();document.getElementById('cnt-lbl').textContent=`${filtered.length.toLocaleString()} articles`;}
 
 function renderMetrics(){
   const vp=getViewPapers();
@@ -804,7 +1548,7 @@ function renderSrcChips(){
   const sources=[...new Set(papers.map(p=>p.source_file).filter(Boolean))];
   const el=document.getElementById('src-chips');
   if(sources.length<=1){el.style.display='none';return;}
-  el.style.display='flex';el.style.gap='6px';el.style.alignItems='center';el.style.flexWrap='wrap';el.style.maxHeight='120px';el.style.overflowY='auto';el.style.padding='6px 8px';el.style.border='0.5px solid var(--border)';el.style.borderRadius='6px';el.style.background='#fff';
+  el.style.display='flex';el.style.gap='6px';el.style.alignItems='center';el.style.flexWrap='wrap';
   const isAll=selectedSources.has('ALL');
   el.innerHTML=`<span style="font-size:11px;color:var(--text3);flex-shrink:0">File:</span>
     <span class="src-chip ${isAll?'active':''}" onclick="setSrc('ALL')">All (${papers.length.toLocaleString()})</span>`
@@ -868,13 +1612,22 @@ function renderTable(){
       :'';
     const pathBtn=folderPath
       ?`<button class="dl-btn" onclick="copyPath('${folderPath.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',this)"
-          style="font-size:10px;background:var(--bg2);color:var(--text2);border-color:var(--border);margin-top:4px;width:100%;justify-content:center">
+          style="font-size:10px;background:var(--bg2);color:var(--text2);border-color:var(--border);margin-top:4px;width:100%;justify-content:center"
+          title="${folderPath.replace(/"/g,'&quot;')}">
           📋 Copy folder path
         </button>`
       :'';
 
     // Notes
     const notes=String(p.team_notes||'').trim();
+    const NOTE_COLORS={
+      'Paywalled - no access':      {bg:'#FAEEDA',color:'#633806',border:'#f0c070'},
+      'Institutional access needed':{bg:'#E6F1FB',color:'#0C447C',border:'#a0c4e8'},
+      'Abstract only':              {bg:'#EEEDFE',color:'#3C3489',border:'#b0aaf0'},
+      'Not found online':           {bg:'#FCEBEB',color:'#791F1F',border:'#f0a0a0'},
+      'Other':                      {bg:'#f1efe8',color:'#73726c',border:'#d3d1c7'},
+    };
+    const nc=NOTE_COLORS[notes]||{bg:'#f1efe8',color:'#73726c',border:'#d3d1c7'};
     const noteOptions=[
       {v:'Paywalled - no access',    d:'Behind paywall, no institutional access'},
       {v:'Institutional access needed', d:'May be available via your institution library'},
@@ -883,9 +1636,9 @@ function renderTable(){
       {v:'Other',                    d:'Any other reason'},
     ];
     const notesCell=`<td style="vertical-align:top;padding:6px 8px;min-width:140px">
-      ${notes?`<div style="font-size:10px;color:var(--text2);background:var(--bg2);border-radius:4px;padding:3px 6px;margin-bottom:4px;line-height:1.4;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:4px"
+      ${notes?`<div class="note-chip" style="font-size:10px;color:${nc.color};background:${nc.bg};border:0.5px solid ${nc.border};border-radius:4px;padding:3px 6px;margin-bottom:4px;line-height:1.4;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:4px"
         onclick="editNote('${p.id}',this,'${notes.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')" title="Click to edit">
-        <span>${notes}</span><span style="font-size:9px;color:var(--text3)">✏</span>
+        <span>${notes}</span><span style="font-size:9px;opacity:.6">✏</span>
       </div>`:''}
       <select onchange="saveNote('${p.id}',this.value,this)" style="font-size:10px;padding:3px 6px;border:0.5px solid var(--border);border-radius:4px;background:#fff;color:var(--text2);width:100%;cursor:pointer">
         <option value="">${notes?'Change note…':'+ Add note…'}</option>
@@ -906,10 +1659,9 @@ function renderTable(){
         ${pathBtn}
       </td>`;
     } else {
-      const doiLink=doi?`<a href="https://doi.org/${doi}" target="_blank" onclick="return openArticle(this.href)" style="font-size:10px;color:var(--blue-t);display:block;margin-top:3px">Open via DOI →</a>`:'';
+      const doiLink=doi?`<a href="https://doi.org/${doi}" onclick="event.preventDefault();window.open('https://doi.org/${doi}','_blank','noopener,noreferrer,width=1200,height=800')" style="font-size:10px;color:var(--blue-t);display:block;margin-top:3px">Open via DOI →</a>`:'';
       const pubLink=String(p.pubmed_link||'').trim();
-      const pmLink=pubLink?`<a href="${pubLink}" target="_blank" onclick="return openArticle(this.href)" style="font-size:10px;color:var(--text2);display:block">PubMed →</a>`:'';
-      pdfCell=`<td style="vertical-align:top;padding:6px 8px;text-align:center">
+      const pmLink=pubLink?`<a href="${pubLink}" onclick="event.preventDefault();window.open('${pubLink}','_blank','noopener,noreferrer,width=1200,height=800')" style="font-size:10px;color:var(--text2);display:block">PubMed →</a>`:'';      pdfCell=`<td style="vertical-align:top;padding:6px 8px;text-align:center">
         <span class="pdf-paywall">🔒 Paywalled</span>
         ${doiLink}${pmLink}
         <button class="dl-btn dl-btn-no" onclick="toggleDl('${p.id}',true)" style="margin-top:4px">✓ Mark downloaded</button>
@@ -925,7 +1677,7 @@ function renderTable(){
           <span style="font-size:10px;color:var(--text3)">${p.year||'—'}</span>
           <button class="dl-btn" onclick="copyTitle('${title.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')}',this)"
             style="font-size:9px;padding:2px 5px;background:var(--bg2);color:var(--text3);border-color:var(--border)">
-            📋 Copy PDF name
+            📋 Copy title
           </button>
         </div>
       </td>
@@ -967,18 +1719,48 @@ async function toggleDl(id,markDl){
     papers[idx].pdf_saved=markDl?'Yes':'No';
     papers[idx].downloaded_by_name=markDl?name:null;
     papers[idx].downloaded_at=markDl?now:null;
-    applyFilters();
+    // Update metrics bar only (fast) — no full re-render
+    renderMetrics();
   }
-  await db.from('papers').update({
+  // Fire DB update in background — don't await before UI update
+  db.from('papers').update({
     pdf_saved:markDl?'Yes':'No',
     downloaded_by_name:markDl?name:null,
     downloaded_at:markDl?now:null,
   }).eq('id',id);
-  await db.from('download_log').insert({paper_id:id,user_name:name,action:markDl?'downloaded':'reverted'});
+  db.from('download_log').insert({paper_id:id,user_name:name,action:markDl?'downloaded':'reverted'});
+  // Refresh just the PDF cell in the current table row
+  const tr=document.querySelector(`button[onclick*="'${id}'"]`)?.closest('tr');
+  if(tr){
+    const doi=String(papers[idx]?.doi||'').replace(/^doi:\s*/i,'');
+    const pubLink=String(papers[idx]?.pubmed_link||'').trim();
+    const domain=String(papers[idx]?.domain||'').trim();
+    const subDomain=String(papers[idx]?.sub_domain||'').trim().replace(/\s+/g,'_');
+    const studyType=String(papers[idx]?.study_type||'').trim().replace(/\s+/g,'_');
+    const DOMAIN_MAP={'Cardiac CT':'Cardiac CT & MRI','Cardiac MRI':'Cardiac CT & MRI'};
+    const mappedDomain=DOMAIN_MAP[domain]||domain;
+    const BASE_PATH='\\\\10.10.10.199\\data\\Tags-Data\\Literature Data Collection';
+    const folderPath=mappedDomain&&subDomain&&studyType?`${BASE_PATH}\\${mappedDomain}\\${subDomain}\\${studyType}`:'';
+    const pathBtn=folderPath
+      ?`<button class="dl-btn" onclick="copyPath('${folderPath.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',this)" style="font-size:10px;background:var(--bg2);color:var(--text2);border-color:var(--border);margin-top:4px;width:100%;justify-content:center" title="${folderPath.replace(/"/g,'&quot;')}">📋 Copy folder path</button>`
+      :'';
+    const pdfTd=tr.querySelector('td:nth-last-child(2)');
+    if(pdfTd){
+      if(markDl){
+        pdfTd.innerHTML=`<span class="pdf-yes">✓ Downloaded</span><div class="dl-who">by ${name} · ${new Date().toLocaleDateString()}</div><button class="dl-btn dl-btn-yes" onclick="toggleDl('${id}',false)" style="margin-top:4px">↩ Revert</button>${pathBtn}`;
+      } else {
+        const doiLink=doi?`<a href="https://doi.org/${doi}" onclick="event.preventDefault();window.open('https://doi.org/${doi}','_blank','noopener,noreferrer,width=1200,height=800')" style="font-size:10px;color:var(--blue-t);display:block;margin-top:3px">Open via DOI →</a>`:'';
+        const pmLink=pubLink?`<a href="${pubLink}" onclick="event.preventDefault();window.open('${pubLink}','_blank','noopener,noreferrer,width=1200,height=800')" style="font-size:10px;color:var(--text2);display:block">PubMed →</a>`:'';
+        pdfTd.innerHTML=`<span class="pdf-paywall">🔒 Paywalled</span>${doiLink}${pmLink}<button class="dl-btn dl-btn-no" onclick="toggleDl('${id}',true)" style="margin-top:4px">✓ Mark downloaded</button>${pathBtn}`;
+      }
+    }
+  }
 }
 
 // ── Upload ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', ()=>{
 const upDrop=document.getElementById('up-drop');
+if(!upDrop) return;
 upDrop.addEventListener('dragover',e=>{e.preventDefault();upDrop.classList.add('drag-over');});
 upDrop.addEventListener('dragleave',()=>upDrop.classList.remove('drag-over'));
 upDrop.addEventListener('drop',e=>{
@@ -987,6 +1769,7 @@ upDrop.addEventListener('drop',e=>{
   if(fs.length)handleUpload(fs);
 });
 upDrop.addEventListener('click',e=>{if(!e.target.closest('label'))document.getElementById('up-input').click();});
+}); // end DOMContentLoaded for upDrop
 
 async function handleUpload(files){
   const validFiles=Array.from(files).filter(f=>/\.(xlsx|xls|csv)$/i.test(f.name));
@@ -1140,28 +1923,18 @@ function renderActivity(){
 
 // ── Nav helpers ────────────────────────────────────────────
 function copyTitle(title, btn){
-  // Build PDF-friendly filename: strip forbidden + problematic chars, spaces → underscores
-  const filename = String(title)
-    .trim()
-    .replace(/[\u2018\u2019\u201C\u201D]/g, '')   // smart quotes (curly)
-    .replace(/[:\/\\?*"<>|'`,;!&]/g, '')          // Windows-forbidden + network-share/URL troublemakers
-    .replace(/\s+/g, '_')                          // spaces → _
-    .replace(/_{2,}/g, '_')                         // collapse __ → _
-    .replace(/^[_.]+|[_.]+$/g, '')                   // trim edges
-    .slice(0, 200);                                   // cap length
-  navigator.clipboard.writeText(filename).then(()=>{
+  // Remove characters not allowed in Windows filenames: \ / : * ? " < > |
+  // Also replace spaces with underscores
+  const formatted=title
+    .replace(/[\\/:*?"<>|]/g,'')
+    .replace(/\s+/g,'_')
+    .trim();
+  navigator.clipboard.writeText(formatted).then(()=>{
     const orig=btn.innerHTML;
     btn.innerHTML='✓ Copied!';
     btn.style.color='var(--green-t)';
     setTimeout(()=>{btn.innerHTML=orig;btn.style.color='';},1800);
-  }).catch(()=>prompt('Copy this filename:',filename));
-}
-
-// Open DOI/PubMed links in a single shared reader window, reused across clicks
-function openArticle(url){
-  const w = window.open(url, 'litvault_reader', 'width=1200,height=900,scrollbars=yes,resizable=yes');
-  if(w){ w.focus(); return false; }       // success → block default link nav
-  return true;                              // popup blocked → fall back to new tab
+  }).catch(()=>prompt('Copy this title:',formatted));
 }
 
 function toggleNotesLegend(){
@@ -1197,10 +1970,43 @@ async function saveNote(id, value, sel){
   if(value==='__clear__') value='';
   const idx=papers.findIndex(p=>p.id===id);
   if(idx>=0) papers[idx].team_notes=value||null;
-  await db.from('papers').update({team_notes:value||null}).eq('id',id);
   sel.value='';
-  // Re-render just this row's note area
-  applyFilters();
+  // Update just the note chip in the DOM — no full re-render
+  const tr=sel.closest('tr');
+  if(tr){
+    const NOTE_COLORS={
+      'Paywalled - no access':      {bg:'#FAEEDA',color:'#633806',border:'#f0c070'},
+      'Institutional access needed':{bg:'#E6F1FB',color:'#0C447C',border:'#a0c4e8'},
+      'Abstract only':              {bg:'#EEEDFE',color:'#3C3489',border:'#b0aaf0'},
+      'Not found online':           {bg:'#FCEBEB',color:'#791F1F',border:'#f0a0a0'},
+      'Other':                      {bg:'#f1efe8',color:'#73726c',border:'#d3d1c7'},
+    };
+    const nc=NOTE_COLORS[value]||{bg:'#f1efe8',color:'#73726c',border:'#d3d1c7'};
+    const noteDiv=tr.querySelector('.note-chip');
+    if(noteDiv){
+      if(value){
+        noteDiv.style.cssText=`font-size:10px;color:${nc.color};background:${nc.bg};border:0.5px solid ${nc.border};border-radius:4px;padding:3px 6px;margin-bottom:4px;line-height:1.4;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:4px`;
+        noteDiv.innerHTML=`<span>${value}</span><span style="font-size:9px;opacity:.6">✏</span>`;
+        noteDiv.setAttribute('onclick',`editNote('${id}',this,'${value.replace(/'/g,"\\'")}')`);
+        noteDiv.style.display='flex';
+      } else {
+        noteDiv.style.display='none';
+        noteDiv.innerHTML='';
+      }
+    } else if(value){
+      const td=sel.closest('td');
+      const chip=document.createElement('div');
+      chip.className='note-chip';
+      chip.style.cssText=`font-size:10px;color:${nc.color};background:${nc.bg};border:0.5px solid ${nc.border};border-radius:4px;padding:3px 6px;margin-bottom:4px;line-height:1.4;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:4px`;
+      chip.innerHTML=`<span>${value}</span><span style="font-size:9px;opacity:.6">✏</span>`;
+      chip.setAttribute('onclick',`editNote('${id}',chip,'${value.replace(/'/g,"\\'")}')`);
+      td.insertBefore(chip,sel);
+    }
+    // Update select placeholder
+    sel.options[0].text=value?'Change note…':'+ Add note…';
+  }
+  // Save to DB in background
+  db.from('papers').update({team_notes:value||null}).eq('id',id);
 }
 
 function copyPath(path, btn){
@@ -1342,6 +2148,140 @@ function setSrc(s){
   }
   tier='ALL'; applyFilters();
 }
+function renderDomainFilter(){
+  const sel=document.getElementById('domain-filter');
+  if(!sel)return;
+  const current=sel.value;
+  const domains=[...new Set(getViewPapers().map(p=>(p.domain||'').trim()).filter(Boolean))].sort();
+  sel.innerHTML='<option value="">All domains</option>'
+    +domains.map(d=>`<option value="${d.replace(/"/g,'&quot;')}" ${domainFilter===d?'selected':''}>${d}</option>`).join('');
+  if(current) sel.value=current;
+}
+
+function onDomainFilter(){
+  domainFilter=document.getElementById('domain-filter').value;
+  applyFilters();
+}
+
+let subdashDomain='ALL';
+
+function toggleSubDash(){
+  const b=document.getElementById('subdash-body');
+  const c=document.getElementById('subdash-chevron');
+  const open=b.style.display!=='none';
+  b.style.display=open?'none':'block';
+  c.style.transform=open?'rotate(0deg)':'rotate(180deg)';
+  if(!open) renderSubDash();
+}
+
+function renderSubDash(){
+  const body=document.getElementById('subdash-body');
+  if(!body||body.style.display==='none') return;
+
+  const vp=getViewPapers();
+  const domains=[...new Set(vp.map(p=>(p.domain||'').trim()).filter(Boolean))].sort();
+
+  // Domain chips
+  const chipEl=document.getElementById('subdash-domain-chips');
+  chipEl.innerHTML=`<span onclick="setSubDashDomain('ALL')" style="font-size:10px;font-weight:500;padding:2px 10px;border-radius:10px;cursor:pointer;user-select:none;background:${subdashDomain==='ALL'?'#1a1a1a':'var(--bg2)'};color:${subdashDomain==='ALL'?'#fff':'var(--text2)'};border:0.5px solid var(--border)">All</span>`
+    +domains.map(d=>`<span onclick="setSubDashDomain('${d.replace(/'/g,"\\'")}')" style="font-size:10px;font-weight:500;padding:2px 10px;border-radius:10px;cursor:pointer;user-select:none;background:${subdashDomain===d?'#1a1a1a':'var(--bg2)'};color:${subdashDomain===d?'#fff':'var(--text2)'};border:0.5px solid var(--border)">${d}</span>`).join('');
+
+  const filtered_vp=subdashDomain==='ALL'?vp:vp.filter(p=>(p.domain||'').trim()===subdashDomain);
+  const subdomains=[...new Set(filtered_vp.map(p=>(p.sub_domain||'').trim()).filter(Boolean))].sort();
+
+  if(!subdomains.length){
+    document.getElementById('subdash-table').innerHTML='<div style="color:var(--text2);font-size:12px">No data</div>';
+    return;
+  }
+
+  const TC=[
+    {label:'T1',bg:'var(--green)',  light:'var(--green-l)',  text:'var(--green-t)'},
+    {label:'T2',bg:'var(--blue)',   light:'var(--blue-l)',   text:'var(--blue-t)'},
+    {label:'T3',bg:'var(--amber)',  light:'var(--amber-l)',  text:'var(--amber-t)'},
+    {label:'T4',bg:'#a32d2d',       light:'var(--red-l)',    text:'var(--red-t)'},
+  ];
+  const tiers=['Tier 1','Tier 2','Tier 3','Tier 4'];
+  const isDl=p=>String(p.pdf_saved||'').toLowerCase()==='yes';
+
+  const cards=subdomains.map(sd=>{
+    const sdPapers=filtered_vp.filter(p=>(p.sub_domain||'').trim()===sd);
+    const total=sdPapers.length;
+    const domainLabel=sdPapers[0]?.domain||'';
+    const tierPapers=tiers.map(t=>sdPapers.filter(p=>p._tier===t));
+    const tierCounts=tierPapers.map(arr=>arr.length);
+    const tierDl=tierPapers.map(arr=>arr.filter(isDl).length);
+    const totalDl=tierDl.reduce((a,b)=>a+b,0);
+    const dlPct=total?Math.round(totalDl/total*100):0;
+
+    const tierRows=tiers.map((t,i)=>{
+      if(!tierCounts[i]) return '';
+      const pct=Math.round(tierDl[i]/tierCounts[i]*100);
+      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+        <span style="font-size:10px;font-weight:600;padding:1px 5px;border-radius:3px;background:${TC[i].light};color:${TC[i].text};width:22px;text-align:center;flex-shrink:0">${TC[i].label}</span>
+        <div style="flex:1;background:var(--bg2);border-radius:3px;height:5px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${TC[i].bg};border-radius:3px"></div>
+        </div>
+        <span style="font-size:10px;color:var(--text2);min-width:36px;text-align:right">${tierDl[i]}/${tierCounts[i]}</span>
+      </div>`;
+    }).join('');
+
+    return `<div onclick="filterBySubDomain('${sd.replace(/'/g,"\\'")}','${domainLabel.replace(/'/g,"\\'")}')"
+      style="background:#fff;border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;cursor:pointer;transition:border-color .15s"
+      onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+        <div style="font-size:12px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%" title="${sd}">${sd}</div>
+        <div style="font-size:10px;color:var(--text3);flex-shrink:0">${totalDl}/${total} · ${dlPct}%</div>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:7px">${domainLabel}</div>
+      ${tierRows}
+    </div>`;
+  }).join('');
+
+  document.getElementById('subdash-table').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">${cards}</div>`;
+}
+
+function setSubDashDomain(d){
+  subdashDomain=d;
+  renderSubDash();
+}
+
+function filterBySubDomain(sd, domain){
+  // Clicking a row filters the main table to that sub-domain
+  document.getElementById('search-input').value=sd;
+  q=sd;
+  if(domain) domainFilter=domain;
+  applyFilters();
+  // Close dashboard and scroll to table
+  document.getElementById('subdash-body').style.display='none';
+  document.getElementById('subdash-chevron').style.transform='rotate(0deg)';
+}
+
+function renderJournalFilter(){
+  const sel=document.getElementById('journal-filter');
+  if(!sel)return;
+  const current=sel.value;
+  const journals=[...new Set(
+    getViewPapers()
+      .map(p=>(p.journal||'').trim())
+      .filter(Boolean)
+  )].sort((a,b)=>a.localeCompare(b));
+  sel.innerHTML='<option value="">All journals</option>'
+    +'<option value="__none__">— No journal data</option>'
+    +journals.map(j=>`<option value="${j.toLowerCase().replace(/"/g,'&quot;')}" ${journalFilter===j.toLowerCase()?'selected':''}>${j}</option>`).join('');
+  if(current) sel.value=current;
+}
+
+function onNoteFilter(){
+  noteFilter=document.getElementById('note-filter').value;
+  applyFilters();
+}
+
+function onJournalFilter(){
+  journalFilter=document.getElementById('journal-filter').value;
+  applyFilters();
+}
+
 function onSearch(){q=document.getElementById('search-input').value;applyFilters();}
 function onYr(){yf=parseInt(document.getElementById('yr-from').value)||null;yt=parseInt(document.getElementById('yr-to').value)||null;applyFilters();}
 function onSort(){const[c,d]=document.getElementById('sort-sel').value.split(':');sortCol=c;sortDir=parseInt(d);applyFilters();}
