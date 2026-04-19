@@ -544,14 +544,34 @@ function isGuest(){ return myRole==='guest'; }
 function canEdit(){ return myRole==='admin'||myRole==='viewer'; }
 
 async function loadUserList(){
-  const{data}=await db.from('users').select('name').order('name');
   const sel=document.getElementById('auth-user');
-  if(!sel||!data) return;
-  data.forEach(u=>{
-    const o=document.createElement('option');
-    o.value=u.name; o.textContent=u.name;
-    sel.appendChild(o);
-  });
+  if(!sel) return;
+  // Hardcoded fallback user list — always shown even if DB query fails
+  const USERS=['Daniel','Ella','Guest','Roi','Sara','Yarden'];
+  try{
+    const{data,error}=await db.from('users').select('name').order('name');
+    if(!error&&data&&data.length>0){
+      data.forEach(u=>{
+        const o=document.createElement('option');
+        o.value=u.name; o.textContent=u.name;
+        sel.appendChild(o);
+      });
+    } else {
+      // Fallback to hardcoded list
+      USERS.forEach(name=>{
+        const o=document.createElement('option');
+        o.value=name; o.textContent=name;
+        sel.appendChild(o);
+      });
+    }
+  } catch(e){
+    // Fallback to hardcoded list
+    USERS.forEach(name=>{
+      const o=document.createElement('option');
+      o.value=name; o.textContent=name;
+      sel.appendChild(o);
+    });
+  }
   // Show/hide password field based on selection
   sel.addEventListener('change',()=>{
     const passWrap=document.getElementById('pass-wrap');
@@ -588,7 +608,7 @@ async function doAuth(){
   myName=data.name; myRole=data.role;
   localStorage.setItem('lv-name',myName);
   localStorage.setItem('lv-role',myRole);
-  showApp(); loadPapers(); subscribeRealtime(); loadActivity();
+  showApp(); loadPapers(); loadGoal(); subscribeRealtime(); loadActivity();
 }
 
 function doSignOut(){
@@ -630,7 +650,7 @@ const _savedRole=localStorage.getItem('lv-role');
 if(_savedName&&_savedRole){
   myName=_savedName; myRole=_savedRole;
   showApp();
-  document.addEventListener('DOMContentLoaded',()=>{loadPapers();subscribeRealtime();loadActivity();});
+  document.addEventListener('DOMContentLoaded',()=>{loadPapers();loadGoal();subscribeRealtime();loadActivity();});
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
@@ -2716,6 +2736,31 @@ function toggleSubDash(){
   if(!open) renderSubDash();
 }
 
+// ── Sub-domain Goal ────────────────────────────────────────
+let sdGoal={target:20, deadline:'', updatedAt:''};
+
+async function loadGoal(){
+  try{
+    const{data}=await db.from('settings').select('value').eq('key','sd_goal').single();
+    if(data) sdGoal=JSON.parse(data.value);
+  }catch(e){}
+}
+
+async function saveGoal(target, deadline){
+  sdGoal={target:parseInt(target)||20, deadline:deadline||'', updatedAt:new Date().toLocaleDateString()};
+  await db.from('settings').upsert({key:'sd_goal', value:JSON.stringify(sdGoal), updated_at:new Date().toISOString()},{onConflict:'key'});
+  renderSubDash();
+}
+
+function openGoalEditor(){
+  if(!isAdmin()) return;
+  const t=prompt('T1 download goal per sub-domain:', sdGoal.target||20);
+  if(t===null) return;
+  const d=prompt('Deadline (e.g. Apr 30, 2026):', sdGoal.deadline||'');
+  if(d===null) return;
+  saveGoal(t, d);
+}
+
 function renderSubDash(){
   const body=document.getElementById('subdash-body');
   if(!body||body.style.display==='none') return;
@@ -2745,6 +2790,17 @@ function renderSubDash(){
   const tiers=['Tier 1','Tier 2','Tier 3','Tier 4'];
   const isDl=p=>String(p.pdf_saved||'').toLowerCase()==='yes';
 
+  // Goal header
+  const goalTarget=sdGoal.target||20;
+  const goalDeadline=sdGoal.deadline||'';
+  const goalHeader=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:11px;font-weight:500;color:var(--text)">🎯 T1 Goal: <strong>${goalTarget}</strong> downloads per sub-domain</span>
+      ${goalDeadline?`<span style="font-size:10px;color:var(--text3)">by ${goalDeadline}</span>`:''}
+    </div>
+    ${isAdmin()?`<button class="btn" onclick="openGoalEditor()" style="font-size:10px;padding:3px 8px;gap:4px">✏ Edit goal</button>`:''}
+  </div>`;
+
   const cards=subdomains.map(sd=>{
     const sdPapers=filtered_vp.filter(p=>(p.sub_domain||'').trim()===sd);
     const total=sdPapers.length;
@@ -2755,9 +2811,23 @@ function renderSubDash(){
     const totalDl=tierDl.reduce((a,b)=>a+b,0);
     const dlPct=total?Math.round(totalDl/total*100):0;
 
+    // T1 goal progress
+    const t1Dl=tierDl[0];
+    const goalPct=Math.min(100,Math.round(t1Dl/goalTarget*100));
+    const goalCol=goalPct>=100?'var(--green)':goalPct>=50?'var(--blue)':'var(--amber)';
+    const goalBar=`<div style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+        <span style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">T1 Goal</span>
+        <span style="font-size:10px;color:${goalCol};font-weight:500">${t1Dl}/${goalTarget} · ${goalPct}%</span>
+      </div>
+      <div style="background:var(--bg2);border-radius:3px;height:5px;overflow:hidden">
+        <div style="width:${goalPct}%;height:100%;background:${goalCol};border-radius:3px;transition:width .3s"></div>
+      </div>
+    </div>`;
+
+    // All 4 tiers — always shown
     const tierRows=tiers.map((t,i)=>{
-      if(!tierCounts[i]) return '';
-      const pct=Math.round(tierDl[i]/tierCounts[i]*100);
+      const pct=tierCounts[i]?Math.round(tierDl[i]/tierCounts[i]*100):0;
       return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
         <span style="font-size:10px;font-weight:600;padding:1px 5px;border-radius:3px;background:${TC[i].light};color:${TC[i].text};width:22px;text-align:center;flex-shrink:0">${TC[i].label}</span>
         <div style="flex:1;background:var(--bg2);border-radius:3px;height:5px;overflow:hidden">
@@ -2776,11 +2846,13 @@ function renderSubDash(){
       </div>
       <div style="font-size:10px;color:var(--text3);margin-bottom:7px">${domainLabel}</div>
       ${tierRows}
+      ${goalBar}
     </div>`;
   }).join('');
 
   document.getElementById('subdash-table').innerHTML=`
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">${cards}</div>`;
+    ${goalHeader}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px">${cards}</div>`;
 }
 
 function setSubDashDomain(d){
