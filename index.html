@@ -364,15 +364,7 @@ tr:hover td{background:#fafaf8}
           </div>
         </div>
       </div>
-      <div id="src-chips-wrap" style="margin-bottom:8px;border:0.5px solid var(--border);border-radius:var(--r);background:#fff;overflow:hidden">
-        <div id="src-chips-header" onclick="toggleSrcChips()" style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;user-select:none;background:var(--bg);transition:background .12s" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='var(--bg)'">
-          <svg id="src-chips-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s;color:var(--text2);flex-shrink:0"><polyline points="6 9 12 15 18 9"></polyline></svg>
-          <span style="font-size:11px;font-weight:600;color:var(--text);flex-shrink:0">Files</span>
-          <span id="src-chips-count" style="font-size:10px;color:var(--text3);flex-shrink:0"></span>
-          <span id="src-chips-summary" style="font-size:10px;color:var(--text2);margin-left:auto;flex-shrink:0"></span>
-        </div>
-        <div id="src-chips" style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;max-height:140px;overflow-y:auto;padding:8px 10px"></div>
-      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:flex-start;max-height:120px;overflow-y:auto;padding-right:4px" id="src-chips"></div>
       <div class="tier-chips">
         <span class="tchip c-all" data-tier="ALL" onclick="setTier('ALL')">All</span>
         <span class="tchip c-t1" data-tier="Tier 1" onclick="setTier('Tier 1')">Tier 1</span>
@@ -1946,31 +1938,18 @@ function renderMetrics(){
 
 function renderSrcChips(){
   const sources=[...new Set(papers.map(p=>p.source_file).filter(Boolean))];
-  const wrap=document.getElementById('src-chips-wrap');
   const el=document.getElementById('src-chips');
-  if(sources.length<=1){wrap.style.display='none';return;}
-  wrap.style.display='block';
+  if(sources.length<=1){el.style.display='none';return;}
+  el.style.display='flex';el.style.gap='6px';el.style.alignItems='center';el.style.flexWrap='wrap';
   const isAll=selectedSources.has('ALL');
-  el.innerHTML=`<span class="src-chip ${isAll?'active':''}" onclick="setSrc('ALL')">All (${papers.length.toLocaleString()})</span>`
-    +sources.map((s,i)=>{
+  el.innerHTML=`<span style="font-size:11px;color:var(--text3);flex-shrink:0">File:</span>
+    <span class="src-chip ${isAll?'active':''}" onclick="setSrc('ALL')">All (${papers.length.toLocaleString()})</span>`
+    +sources.map(s=>{
       const n=papers.filter(p=>p.source_file===s).length;
       const short=s.replace(/\.(xlsx?|csv)$/i,'');
       const active=!isAll&&selectedSources.has(s);
-      return `<span class="src-chip ${active?'active':''}" onclick="setSrc('${s.replace(/'/g,"\\'")}')" title="${s}"><span style="font-weight:600;opacity:.7;margin-right:3px">${i+1}.</span>📄 ${short.slice(0,26)}${short.length>26?'…':''} (${n.toLocaleString()})</span>`;
+      return `<span class="src-chip ${active?'active':''}" onclick="setSrc('${s.replace(/'/g,"\\'")}')" title="${s}">📄 ${short.slice(0,26)}${short.length>26?'…':''} (${n.toLocaleString()})</span>`;
     }).join('');
-  // Update header count + summary
-  const countEl=document.getElementById('src-chips-count');
-  const sumEl=document.getElementById('src-chips-summary');
-  if(countEl)countEl.textContent=`(${sources.length})`;
-  if(sumEl){
-    if(isAll){
-      sumEl.textContent=`All files • ${papers.length.toLocaleString()} papers`;
-    } else {
-      const selCount=selectedSources.size;
-      const selPapers=papers.filter(p=>selectedSources.has(p.source_file)).length;
-      sumEl.textContent=`${selCount} selected • ${selPapers.toLocaleString()} papers`;
-    }
-  }
 }
 
 function renderTierChips(){
@@ -2552,14 +2531,6 @@ function gotoTab(t){
   if(t==='upload')renderFileManager();
 }
 function setTier(t){tier=t;applyFilters();}
-function toggleSrcChips(){
-  const el=document.getElementById('src-chips');
-  const arrow=document.getElementById('src-chips-arrow');
-  if(!el||!arrow)return;
-  const collapsed=el.style.display==='none';
-  el.style.display=collapsed?'flex':'none';
-  arrow.style.transform=collapsed?'rotate(0deg)':'rotate(-90deg)';
-}
 function setSrc(s){
   if(s==='ALL'){
     selectedSources=new Set(['ALL']);
