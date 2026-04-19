@@ -804,7 +804,7 @@ function renderSrcChips(){
   const sources=[...new Set(papers.map(p=>p.source_file).filter(Boolean))];
   const el=document.getElementById('src-chips');
   if(sources.length<=1){el.style.display='none';return;}
-  el.style.display='flex';el.style.gap='6px';el.style.alignItems='center';el.style.flexWrap='wrap';
+  el.style.display='flex';el.style.gap='6px';el.style.alignItems='center';el.style.flexWrap='wrap';el.style.maxHeight='120px';el.style.overflowY='auto';el.style.padding='6px 8px';el.style.border='0.5px solid var(--border)';el.style.borderRadius='6px';el.style.background='#fff';
   const isAll=selectedSources.has('ALL');
   el.innerHTML=`<span style="font-size:11px;color:var(--text3);flex-shrink:0">File:</span>
     <span class="src-chip ${isAll?'active':''}" onclick="setSrc('ALL')">All (${papers.length.toLocaleString()})</span>`
@@ -1140,11 +1140,11 @@ function renderActivity(){
 
 // ── Nav helpers ────────────────────────────────────────────
 function copyTitle(title, btn){
-  // Build PDF-friendly filename: strip forbidden chars, spaces → underscores
+  // Build PDF-friendly filename: strip forbidden + problematic chars, spaces → underscores
   const filename = String(title)
     .trim()
-    .replace(/[:\/\\?*"<>|]/g, '')               // Windows-forbidden chars
-    .replace(/[\u2018\u2019\u201C\u201D]/g, '')   // smart quotes
+    .replace(/[\u2018\u2019\u201C\u201D]/g, '')   // smart quotes (curly)
+    .replace(/[:\/\\?*"<>|'`,;!&]/g, '')          // Windows-forbidden + network-share/URL troublemakers
     .replace(/\s+/g, '_')                          // spaces → _
     .replace(/_{2,}/g, '_')                         // collapse __ → _
     .replace(/^[_.]+|[_.]+$/g, '')                   // trim edges
