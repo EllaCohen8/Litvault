@@ -655,7 +655,7 @@ function subscribeRealtime(){
       if(i>=0){papers[i]={...papers[i],...payload.new};recompute();applyFilters();}
     })
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'papers'},payload=>{
-      papers.push(payload.new);recompute();applyFilters();
+      papers.push(normalizeP(payload.new));recompute();applyFilters();
     })
     .subscribe();
 
@@ -701,7 +701,7 @@ async function loadPapers(){
 
   document.getElementById('pl').style.display='none';
   if(!allData.length){document.getElementById('pe').style.display='block';return;}
-  papers=allData;
+  papers=allData.map(normalizeP);
   recompute(); applyFilters();
   document.getElementById('pc').style.display='block';
 }
@@ -1461,7 +1461,485 @@ function scoreScale(p){
   const n=parseFloat(p.number_of_patients)||0;
   if(n>=1000)pts+=5;else if(n>=300)pts+=3;else if(n>=100)pts+=2;else if(n>=1)pts+=1;
   return Math.min(10,pts);
+
+// ── Strict two-level classification ───────────────────────
+const TAXONOMY={
+  'Coronary Physiology':[
+    'FFR / iFR / RFR',
+    'Angio-based physiology (QFR, FFRangio)',
+    'CFR (Coronary Flow Reserve)',
+    'IMR (Index of Microvascular Resistance)',
+  ],
+  'Coronary Angiography & Quantification':[
+    'Coronary angiography (CAG)',
+    '2D vs 3D reconstruction',
+    'QCA (Quantitative Coronary Analysis)',
+  ],
+  'PCI & Coronary Interventions':[
+    'Balloon angioplasty',
+    'Stents (DES, BVS)',
+    'CTO (Chronic Total Occlusion)',
+    'Bifurcation lesions',
+    'Left main disease',
+    'Complex PCI',
+  ],
+  'Plaque Modification':[
+    'Rotational atherectomy',
+    'Orbital atherectomy',
+    'Laser atherectomy',
+    'Intravascular lithotripsy (Shockwave)',
+  ],
+  'Intravascular Imaging':[
+    'IVUS (Intravascular Ultrasound)',
+    'OCT / OFDI',
+    'NIRS (Near-Infrared Spectroscopy)',
+  ],
+  'Perfusion & Ischemia':[
+    'SPECT',
+    'PET perfusion imaging',
+    'Stress perfusion MRI',
+    'Stress echocardiography',
+    'Absolute flow quantification',
+  ],
+  'Microvascular Disease':[
+    'IMR',
+    'INOCA / ANOCA',
+  ],
+  'Cardiac CT & MRI':[
+    'CT (CTA, FFR-CT)',
+    'Viability',
+    'Perfusion',
+    'Fibrosis (LGE)',
+  ],
+  'Echocardiography':[
+    'TTE (Transthoracic Echo)',
+    'TEE (Transesophageal Echo)',
+    'Stress echocardiography',
+  ],
+  'Electrophysiology & Arrhythmias':[
+    'Atrial fibrillation (AFib)',
+    'VT / VF',
+    'SVT',
+    'Electro-anatomical mapping',
+    'Ablation (RF / Cryo)',
+    'Navigation systems',
+  ],
+  'Cardiac Devices':[
+    'Pacemakers',
+    'ICD (Implantable Cardioverter Defibrillator)',
+    'CRT (Cardiac Resynchronization Therapy)',
+  ],
+  'Structural Heart Interventions':[
+    'TAVI / TAVR',
+    'MitraClip / TEER',
+    'Left atrial appendage (LAA) closure',
+  ],
+  'Heart Failure':[
+    'HFpEF / HFrEF',
+    'Hemodynamic monitoring',
+    'Mechanical support devices (LVAD)',
+  ],
+  'Pharmacology':[
+    'Antithrombotic therapy',
+    'Lipid-lowering therapies',
+    'Heart failure therapies',
+  ],
+  'Acute Coronary Syndromes':[
+    'STEMI',
+    'NSTEMI',
+  ],
+  'Prevention & Risk Stratification':[
+    'Lipids',
+    'Atherosclerosis progression',
+    'Risk models',
+  ],
+  'Cardio-Metabolic Medicine':[
+    'Diabetes',
+    'Obesity',
+    'Metabolism',
+    'Insulin resistance',
+  ],
+  'Renal & System Interaction':[
+    'Cardio-renal interactions',
+    'Contrast-induced nephropathy',
+    'Fluid balance',
+  ],
+  'Core Scientific Foundations':[
+    'Hemodynamics',
+    'Vascular biology',
+    'Thrombosis & hemostasis',
+  ],
+  'AI & Data Layer':[
+    'Angio-based analysis',
+    'Imaging AI (IVUS/OCT automation)',
+    'Predictive models',
+    'Cardiac imaging',
+    'Coronary angiography analysis',
+  ],
+  'Guidelines':[
+    'ESC Guidelines',
+    'AHA / ACC Guidelines',
+    'Revascularization guidelines',
+  ],
+};
+
+const CANONICAL_DOMAINS=Object.keys(TAXONOMY);
+const DOMAIN_LOWER={};
+CANONICAL_DOMAINS.forEach(d=>{ DOMAIN_LOWER[d.toLowerCase()]=d; });
+
+// Domain aliases — maps every real DB value to a canonical domain
+const DOMAIN_ALIASES={
+  'cardiac ct':'Cardiac CT & MRI',
+  'cardiac mri':'Cardiac CT & MRI',
+  'cardiac ct & mri':'Cardiac CT & MRI',
+  'cardiac ct and mri':'Cardiac CT & MRI',
+  'coronary physiology':'Coronary Physiology',
+  'coronar& quantification':'Coronary Angiography & Quantification',
+  'coronar & quantification':'Coronary Angiography & Quantification',
+  'coronary angiography & quantification':'Coronary Angiography & Quantification',
+  'coronary angiography and quantification':'Coronary Angiography & Quantification',
+  'pci & coronary interventions':'PCI & Coronary Interventions',
+  'electrophysiology & arrhythmias':'Electrophysiology & Arrhythmias',
+  'electrophysiology & arrhythmia':'Electrophysiology & Arrhythmias',
+  'structural heart interventions':'Structural Heart Interventions',
+  'structural heart intervention':'Structural Heart Interventions',
+  'prevention & risk stratification':'Prevention & Risk Stratification',
+  'cardio-metabolic medicine':'Cardio-Metabolic Medicine',
+  'cardiometabolic medicine':'Cardio-Metabolic Medicine',
+  'renal & system interaction':'Renal & System Interaction',
+  'ai & data layer':'AI & Data Layer',
+  'ai and data layer':'AI & Data Layer',
+  'ai data layer':'AI & Data Layer',
+  'perfusion & ischemia':'Perfusion & Ischemia',
+  'acute coronary syndromes':'Acute Coronary Syndromes',
+  'acute coronary syndrome':'Acute Coronary Syndromes',
+  'plaque modification':'Plaque Modification',
+  'intravascular imaging':'Intravascular Imaging',
+  'microvascular disease':'Microvascular Disease',
+  'echocardiography':'Echocardiography',
+  'cardiac devices':'Cardiac Devices',
+  'heart failure':'Heart Failure',
+  'pharmacology':'Pharmacology',
+  'guidelines':'Guidelines',
+  'core scientific foundations':'Core Scientific Foundations',
+};
+
+function normalizeDomain(d){
+  const k=(d||'').trim().toLowerCase();
+  if(DOMAIN_LOWER[k]) return DOMAIN_LOWER[k];
+  if(DOMAIN_ALIASES[k]) return DOMAIN_ALIASES[k];
+  return (d||'').trim();
 }
+
+// Sub-domain aliases — domain-aware mappings based on real DB values
+const SD_ALIASES={
+  // Coronary Physiology
+  'ffr':'FFR / iFR / RFR',
+  'ifr':'FFR / iFR / RFR',
+  'rfr':'FFR / iFR / RFR',
+  'ffr / ifr / rfr':'FFR / iFR / RFR',
+  'ffr/ifr/rfr':'FFR / iFR / RFR',
+  'qfr':'Angio-based physiology (QFR, FFRangio)',
+  'ffrangio':'Angio-based physiology (QFR, FFRangio)',
+  'angio-based physiology':'Angio-based physiology (QFR, FFRangio)',
+  'cfr':'CFR (Coronary Flow Reserve)',
+  'cfr (coronary flow reserve)':'CFR (Coronary Flow Reserve)',
+  // IMR is domain-specific — handled in normalizeSubDomain below
+  // Coronary Angiography & Quantification
+  'coronary angiography (cag)':'Coronary angiography (CAG)',
+  'coronary angiography':'Coronary angiography (CAG)',
+  'cag':'Coronary angiography (CAG)',
+  '2d imaging':'2D vs 3D reconstruction',
+  '3d imaging':'2D vs 3D reconstruction',
+  '2d vs 3d reconstruction':'2D vs 3D reconstruction',
+  'qca':'QCA (Quantitative Coronary Analysis)',
+  'quantitative coronary analysis':'QCA (Quantitative Coronary Analysis)',
+  // Cardiac CT & MRI
+  'coronary ct angiography':'CT (CTA, FFR-CT)',
+  'ct (cta, ffr-ct)':'CT (CTA, FFR-CT)',
+  'late gadolinium enhancement':'Fibrosis (LGE)',
+  'fibrosis (lge)':'Fibrosis (LGE)',
+  'myocardial perfusion':'Perfusion',
+  'perfusion mri':'Stress perfusion MRI',
+  'myocardial viability':'Viability',
+  // Intravascular Imaging
+  'ivus':'IVUS (Intravascular Ultrasound)',
+  'ivus (intravascular ultrasound)':'IVUS (Intravascular Ultrasound)',
+  'intravascular ultrasound':'IVUS (Intravascular Ultrasound)',
+  'ofdi':'OCT / OFDI',
+  'oct':'OCT / OFDI',
+  'oct / ofdi':'OCT / OFDI',
+  'nirs':'NIRS (Near-Infrared Spectroscopy)',
+  'nirs (near-infrared spectroscopy)':'NIRS (Near-Infrared Spectroscopy)',
+  // Perfusion & Ischemia
+  'spect':'SPECT',
+  'pet':'PET perfusion imaging',
+  'pet perfusion imaging':'PET perfusion imaging',
+  'stress perfusion mri':'Stress perfusion MRI',
+  'stress echocardiography':'Stress echocardiography',
+  'stress echo':'Stress echocardiography',
+  'myocardial blood flow':'Absolute flow quantification',
+  // Microvascular Disease
+  'inoca':'INOCA / ANOCA',
+  'anoca':'INOCA / ANOCA',
+  'inoca / anoca':'INOCA / ANOCA',
+  // Echocardiography
+  'transthoracic echocardiography':'TTE (Transthoracic Echo)',
+  'tte':'TTE (Transthoracic Echo)',
+  'transesophageal echocardiography':'TEE (Transesophageal Echo)',
+  'tee':'TEE (Transesophageal Echo)',
+  // Electrophysiology & Arrhythmias
+  'atrial fibrillation':'Atrial fibrillation (AFib)',
+  'afib':'Atrial fibrillation (AFib)',
+  'ventricular tachycardia':'VT / VF',
+  'ventricular fibrillation':'VT / VF',
+  'vt/vf':'VT / VF',
+  'supraventricular tachycardia':'SVT',
+  'svt':'SVT',
+  'electro-anatomical mapping':'Electro-anatomical mapping',
+  'electroanatomic mapping':'Electro-anatomical mapping',
+  'catheter ablation':'Ablation (RF / Cryo)',
+  'ablation (rf / cryo)':'Ablation (RF / Cryo)',
+  'navigation system':'Navigation systems',
+  'navigation systems':'Navigation systems',
+  // Cardiac Devices
+  'icd':'ICD (Implantable Cardioverter Defibrillator)',
+  'crt':'CRT (Cardiac Resynchronization Therapy)',
+  'pacemakers':'Pacemakers',
+  // Structural Heart Interventions
+  'tavi':'TAVI / TAVR',
+  'tavr':'TAVI / TAVR',
+  'tavi / tavr':'TAVI / TAVR',
+  'mitraclip':'MitraClip / TEER',
+  'teer':'MitraClip / TEER',
+  'mitraclip / teer':'MitraClip / TEER',
+  'left atrial appendage closure':'Left atrial appendage (LAA) closure',
+  'laa':'Left atrial appendage (LAA) closure',
+  // Heart Failure
+  'hfpef':'HFpEF / HFrEF',
+  'hfref':'HFpEF / HFrEF',
+  'hfpef / hfref':'HFpEF / HFrEF',
+  'lvad':'Mechanical support devices (LVAD)',
+  'hemodynamic monitoring':'Hemodynamic monitoring',
+  // PCI & Coronary Interventions
+  'balloon angioplasty':'Balloon angioplasty',
+  'chronic total occlusion':'CTO (Chronic Total Occlusion)',
+  'cto':'CTO (Chronic Total Occlusion)',
+  'stent implantation':'Stents (DES, BVS)',
+  'stenting':'Stents (DES, BVS)',
+  'stents - des':'Stents (DES, BVS)',
+  'stents (des, bvs)':'Stents (DES, BVS)',
+  'pci':'Complex PCI',
+  'coronary intervention':'Complex PCI',
+  // Core Scientific Foundations
+  'thrombosis and hemostasis':'Thrombosis & hemostasis',
+  'thrombosis & hemostasis':'Thrombosis & hemostasis',
+  // Renal & System Interaction
+  'cardiorenal syndrome':'Cardio-renal interactions',
+  'cardio-renal interactions':'Cardio-renal interactions',
+  // Plaque Modification
+  'intravascular lithotripsy':'Intravascular lithotripsy (Shockwave)',
+  'intravascular lithotripsy (shockwave)':'Intravascular lithotripsy (Shockwave)',
+};
+
+function normalizeSubDomain(sd, domain){
+  const k=(sd||'').trim().toLowerCase();
+  // If sub_domain looks like a canonical domain — data entry error, keep raw
+  if(DOMAIN_LOWER[k]) return (sd||'').trim();
+  // Domain-specific overrides
+  if(domain==='Coronary Physiology'&&k==='imr') return 'IMR (Index of Microvascular Resistance)';
+  if(domain==='Microvascular Disease'&&k==='imr') return 'IMR';
+  // General alias map
+  return SD_ALIASES[k]||(sd||'').trim();
+}
+
+function normalizeP(p){
+  const d=normalizeDomain(p.domain);
+  p.domain=d;
+  p.sub_domain=normalizeSubDomain(p.sub_domain, d);
+  return p;
+}
+
+
+  'Coronary Physiology':[
+    'FFR / iFR / RFR',
+    'Angio-based physiology (QFR, FFRangio)',
+    'CFR (Coronary Flow Reserve)',
+    'IMR (Index of Microvascular Resistance)',
+  ],
+  'Coronary Angiography & Quantification':[
+    'Coronary angiography (CAG)',
+    '2D vs 3D reconstruction',
+    'QCA (Quantitative Coronary Analysis)',
+  ],
+  'PCI & Coronary Interventions':[
+    'Balloon angioplasty',
+    'Stents (DES, BVS)',
+    'CTO (Chronic Total Occlusion)',
+    'Bifurcation lesions',
+    'Left main disease',
+    'Complex PCI',
+  ],
+  'Plaque Modification':[
+    'Rotational atherectomy',
+    'Orbital atherectomy',
+    'Laser atherectomy',
+    'Intravascular lithotripsy (Shockwave)',
+  ],
+  'Intravascular Imaging':[
+    'IVUS (Intravascular Ultrasound)',
+    'OCT / OFDI',
+    'NIRS (Near-Infrared Spectroscopy)',
+  ],
+  'Perfusion & Ischemia':[
+    'SPECT',
+    'PET perfusion imaging',
+    'Stress perfusion MRI',
+    'Stress echocardiography',
+    'Absolute flow quantification',
+  ],
+  'Microvascular Disease':[
+    'IMR',
+    'INOCA / ANOCA',
+  ],
+  'Cardiac CT & MRI':[
+    'CT (CTA, FFR-CT)',
+    'Viability',
+    'Perfusion',
+    'Fibrosis (LGE)',
+    'Coronary CT angiography',
+    'Myocardial perfusion',
+    'Late gadolinium enhancement',
+    'Myocardial viability',
+  ],
+  'Echocardiography':[
+    'TTE (Transthoracic Echo)',
+    'TEE (Transesophageal Echo)',
+    'Stress echocardiography',
+    'Transthoracic',
+    'Transesophageal',
+  ],
+  'Electrophysiology & Arrhythmias':[
+    'Atrial fibrillation (AFib)',
+    'VT / VF',
+    'SVT',
+    'Electro-anatomical mapping',
+    'Ablation (RF / Cryo)',
+    'Navigation systems',
+  ],
+  'Cardiac Devices':[
+    'Pacemakers',
+    'ICD (Implantable Cardioverter Defibrillator)',
+    'CRT (Cardiac Resynchronization Therapy)',
+    'ICD',
+    'CRT',
+  ],
+  'Structural Heart Interventions':[
+    'TAVI / TAVR',
+    'MitraClip / TEER',
+    'Left atrial appendage (LAA) closure',
+    'TAVI',
+    'TAVR',
+    'MitraClip',
+  ],
+  'Heart Failure':[
+    'HFpEF / HFrEF',
+    'Hemodynamic monitoring',
+    'Mechanical support devices (LVAD)',
+    'HFpEF',
+    'HFrEF',
+    'LVAD',
+  ],
+  'Pharmacology':[
+    'Antithrombotic therapy',
+    'Lipid-lowering therapies',
+    'Heart failure therapies',
+  ],
+  'Acute Coronary Syndromes':[
+    'STEMI',
+    'NSTEMI',
+  ],
+  'Prevention & Risk Stratification':[
+    'Lipids',
+    'Atherosclerosis progression',
+    'Risk models',
+  ],
+  'Cardio-Metabolic Medicine':[
+    'Diabetes',
+    'Obesity',
+    'Metabolism',
+    'Insulin resistance',
+  ],
+  'Renal & System Interaction':[
+    'Cardio-renal interactions',
+    'Contrast-induced nephropathy',
+    'Fluid balance',
+  ],
+  'Core Scientific Foundations':[
+    'Hemodynamics',
+    'Vascular biology',
+    'Thrombosis & hemostasis',
+  ],
+  'AI & Data Layer':[
+    'Angio-based analysis',
+    'Imaging AI (IVUS/OCT automation)',
+    'Predictive models',
+    'Cardiac imaging',
+    'Coronary angiography analysis',
+  ],
+  'Guidelines':[
+    'ESC Guidelines',
+    'AHA / ACC Guidelines',
+    'Revascularization guidelines',
+  ],
+};
+
+// Build lowercase lookup maps
+const CANONICAL_DOMAINS=Object.keys(TAXONOMY);
+const DOMAIN_LOWER={};
+CANONICAL_DOMAINS.forEach(d=>{ DOMAIN_LOWER[d.toLowerCase()]=d; });
+
+// Domain aliases (various spellings → canonical)
+const DOMAIN_ALIASES={
+  'coronary physiology':'Coronary Physiology',
+  'coronary angiography & quantification':'Coronary Angiography & Quantification',
+  'coronary angiography and quantification':'Coronary Angiography & Quantification',
+  'coronar& quantification':'Coronary Angiography & Quantification',
+  'coronar & quantification':'Coronary Angiography & Quantification',
+  'pci & coronary interventions':'PCI & Coronary Interventions',
+  'pci and coronary interventions':'PCI & Coronary Interventions',
+  'plaque modification':'Plaque Modification',
+  'intravascular imaging':'Intravascular Imaging',
+  'perfusion & ischemia':'Perfusion & Ischemia',
+  'perfusion and ischemia':'Perfusion & Ischemia',
+  'microvascular disease':'Microvascular Disease',
+  'cardiac ct':'Cardiac CT & MRI',
+  'cardiac mri':'Cardiac CT & MRI',
+  'cardiac ct & mri':'Cardiac CT & MRI',
+  'cardiac ct and mri':'Cardiac CT & MRI',
+  'echocardiography':'Echocardiography',
+  'electrophysiology & arrhythmias':'Electrophysiology & Arrhythmias',
+  'electrophysiology and arrhythmias':'Electrophysiology & Arrhythmias',
+  'electrophysiology & arrhythmia':'Electrophysiology & Arrhythmias',
+  'cardiac devices':'Cardiac Devices',
+  'structural heart interventions':'Structural Heart Interventions',
+  'structural heart intervention':'Structural Heart Interventions',
+  'heart failure':'Heart Failure',
+  'pharmacology':'Pharmacology',
+  'acute coronary syndromes':'Acute Coronary Syndromes',
+  'acute coronary syndrome':'Acute Coronary Syndromes',
+  'prevention & risk stratification':'Prevention & Risk Stratification',
+  'prevention and risk stratification':'Prevention & Risk Stratification',
+  'cardio-metabolic medicine':'Cardio-Metabolic Medicine',
+  'cardiometabolic medicine':'Cardio-Metabolic Medicine',
+  'renal & system interaction':'Renal & System Interaction',
+  'renal and system interaction':'Renal & System Interaction',
+  'core scientific foundations':'Core Scientific Foundations',
+  'ai & data layer':'AI & Data Layer',
+  'ai and data layer':'AI & Data Layer',
+  'ai data layer':'AI & Data Layer',
+  'guidelines':'Guidelines',
+};
 
 function recompute(){
   updateDbBadge();
