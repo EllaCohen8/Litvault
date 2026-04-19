@@ -180,6 +180,27 @@ tr:hover td{background:#fafaf8}
     <button class="btn btn-primary" id="auth-btn" onclick="doAuth()">Enter LitVault →</button>
   </div>
 </div>
+<script>
+// Populate dropdown immediately — no waiting for DOMContentLoaded
+(function(){
+  const USERS=['Daniel','Ella','Guest','Roi','Sara','Yarden'];
+  function tryPopulate(){
+    const sel=document.getElementById('auth-user');
+    if(!sel){setTimeout(tryPopulate,50);return;}
+    if(sel.options.length>1) return; // already populated
+    USERS.forEach(name=>{
+      const o=document.createElement('option');
+      o.value=name;o.textContent=name;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change',()=>{
+      const pw=document.getElementById('pass-wrap');
+      if(pw) pw.style.display=sel.value==='Guest'?'none':'block';
+    });
+  }
+  tryPopulate();
+})();
+</script>
 
 <!-- ══ APP ═══════════════════════════════════════════════ -->
 <div id="app">
@@ -546,32 +567,13 @@ function canEdit(){ return myRole==='admin'||myRole==='viewer'; }
 async function loadUserList(){
   const sel=document.getElementById('auth-user');
   if(!sel) return;
-  // Hardcoded fallback user list — always shown even if DB query fails
+  // Always load hardcoded list immediately
   const USERS=['Daniel','Ella','Guest','Roi','Sara','Yarden'];
-  try{
-    const{data,error}=await db.from('users').select('name').order('name');
-    if(!error&&data&&data.length>0){
-      data.forEach(u=>{
-        const o=document.createElement('option');
-        o.value=u.name; o.textContent=u.name;
-        sel.appendChild(o);
-      });
-    } else {
-      // Fallback to hardcoded list
-      USERS.forEach(name=>{
-        const o=document.createElement('option');
-        o.value=name; o.textContent=name;
-        sel.appendChild(o);
-      });
-    }
-  } catch(e){
-    // Fallback to hardcoded list
-    USERS.forEach(name=>{
-      const o=document.createElement('option');
-      o.value=name; o.textContent=name;
-      sel.appendChild(o);
-    });
-  }
+  USERS.forEach(name=>{
+    const o=document.createElement('option');
+    o.value=name; o.textContent=name;
+    sel.appendChild(o);
+  });
   // Show/hide password field based on selection
   sel.addEventListener('change',()=>{
     const passWrap=document.getElementById('pass-wrap');
