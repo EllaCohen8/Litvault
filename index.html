@@ -19,7 +19,7 @@
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;color:var(--text);background:var(--bg);min-height:100vh}
 
-/* ── Auth ── */
+/*   Auth   */
 .auth-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
 .auth-card{background:#fff;border:0.5px solid var(--border);border-radius:var(--rl);padding:2rem;width:100%;max-width:400px}
 .logo{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:600;margin-bottom:4px}
@@ -40,7 +40,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .auth-err.err{background:var(--red-l);color:#791F1F}
 .auth-err.ok{background:var(--green-l);color:var(--green-t)}
 
-/* ── Shell ── */
+/*   Shell   */
 #app{display:none}
 .navbar{background:#fff;border-bottom:0.5px solid var(--border);padding:0 20px;height:48px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .nav-logo{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
@@ -56,13 +56,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .tab-panel{display:none;padding:20px}
 .tab-panel.active{display:block}
 
-/* ── Metrics ── */
+/*   Metrics   */
 .metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:14px}
 .mcard{background:#fff;border:0.5px solid var(--border);border-radius:var(--r);padding:10px 14px}
 .mcard-lbl{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
 .mcard-val{font-size:22px;font-weight:500;line-height:1}
 
-/* ── Filters ── */
+/*   Filters   */
 .tier-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .tchip{font-size:11px;font-weight:500;padding:4px 12px;border-radius:12px;cursor:pointer;border:0.5px solid transparent;transition:opacity .15s;user-select:none}
 .tchip.off{opacity:.38}
@@ -77,7 +77,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .src-chip{font-size:10px;font-weight:500;padding:3px 10px;border-radius:10px;cursor:pointer;background:var(--bg2);color:var(--text2);border:0.5px solid var(--border)}
 .src-chip.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
 
-/* ── Table ── */
+/*   Table   */
 .tbl-wrap{overflow-x:auto;max-height:520px;overflow-y:auto;border:0.5px solid var(--border);border-radius:var(--r);background:#fff}
 table{width:100%;border-collapse:collapse;min-width:1100px;table-layout:fixed}
 th{position:sticky;top:0;z-index:2;background:var(--bg);font-size:10px;font-weight:500;color:var(--text2);padding:8px;text-align:center;border-bottom:0.5px solid var(--border);cursor:pointer;white-space:nowrap}
@@ -115,19 +115,19 @@ tr:hover td{background:#fafaf8}
 .pager{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
 .pager-info{font-size:12px;color:var(--text2)}
 
-/* ── Upload ── */
+/*   Upload   */
 .drop-zone{border:1.5px dashed var(--border);border-radius:var(--r);padding:2.5rem;text-align:center;cursor:pointer;transition:all .15s;max-width:500px;margin:0 auto}
 .drop-zone:hover,.drop-zone.drag-over{border-color:var(--blue);background:rgba(24,95,165,.04)}
 .prog-bg{background:var(--border);border-radius:3px;height:6px;overflow:hidden;margin-top:6px}
 .prog-fill{height:100%;background:var(--blue);border-radius:3px;transition:width .3s}
 
-/* ── Activity ── */
+/*   Activity   */
 .act-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:#fff;border:0.5px solid var(--border);border-radius:var(--r);margin-bottom:8px}
 .act-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;flex-shrink:0}
 .act-text{font-size:12px;flex:1;line-height:1.5}
 .act-time{font-size:11px;color:var(--text3);white-space:nowrap}
 
-/* ── Gap section ── */
+/*   Gap section   */
 .gap-section{border:0.5px solid #f5c4b3;background:#fff8f5;border-radius:var(--rl);padding:12px 16px;margin-bottom:12px}
 .gap-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:pointer}
 .gap-title{font-size:12px;font-weight:500;color:#712B13;display:flex;align-items:center;gap:6px}
@@ -140,13 +140,13 @@ tr:hover td{background:#fafaf8}
 .gap-bar-bg{flex:1;height:6px;background:#f5c4b3;border-radius:3px;overflow:hidden}
 .gap-bar-fill{height:100%;border-radius:3px;background:#D85A30}
 .gap-badge{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:500;background:#FAECE7;color:#712B13;border:0.5px solid #f5c4b3;padding:1px 5px;border-radius:3px;margin-left:4px;vertical-align:middle}
-/* ── Cit hover tooltip ── */
+/*   Cit hover tooltip   */
 .cit-hover{position:relative;display:inline-block;cursor:help}
 .cit-hover .cit-tip{display:none;position:absolute;top:calc(100% + 6px);left:0;width:230px;z-index:9999;background:#fff;border:0.5px solid var(--green);border-radius:var(--rl);padding:10px 12px;box-shadow:0 4px 16px rgba(0,0,0,.12);pointer-events:none}
 .cit-hover:hover .cit-tip{display:block}
 .cit-hover .cit-tip::before{content:'';position:absolute;top:-5px;left:12px;width:8px;height:8px;background:#fff;border-left:0.5px solid var(--green);border-top:0.5px solid var(--green);transform:rotate(45deg)}
 
-/* ── Misc ── */
+/*   Misc   */
 .spinner{width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .empty-state{text-align:center;padding:3rem;color:var(--text2)}
@@ -170,18 +170,18 @@ tr:hover td{background:#fafaf8}
     <div class="fg">
       <label>Who are you?</label>
       <select class="fi" id="auth-user" style="cursor:pointer">
-        <option value="">— Select your name —</option>
+        <option value="">- Select your name -</option>
       </select>
     </div>
     <div class="fg" id="pass-wrap">
       <label>Password</label>
       <input class="fi" id="auth-pass" type="password" placeholder="Enter your password">
     </div>
-    <button class="btn btn-primary" id="auth-btn" onclick="doAuth()">Enter LitVault →</button>
+    <button class="btn btn-primary" id="auth-btn" onclick="doAuth()">Enter LitVault &rarr;</button>
   </div>
 </div>
 <script>
-// Populate dropdown immediately — no waiting for DOMContentLoaded
+// Populate dropdown immediately - no waiting for DOMContentLoaded
 (function(){
   const USERS=['Daniel','Ella','Guest','Roi','Sara','Yarden'];
   function tryPopulate(){
@@ -287,11 +287,11 @@ tr:hover td{background:#fafaf8}
           <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;border-bottom:0.5px solid var(--border)">
             <div style="padding:10px 14px;border-right:0.5px solid var(--border)">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:10px;height:10px;border-radius:2px;background:var(--blue-l);border:1px solid var(--blue-t)"></div><span style="font-size:11px;font-weight:600;color:var(--blue-t)">Study Type</span><span style="font-size:10px;background:var(--blue-l);color:var(--blue-t);padding:1px 6px;border-radius:4px;font-weight:600">max 30</span></div>
-              <div style="font-size:11px;color:var(--text2);line-height:1.5">Evidence hierarchy — most important dimension. Reflects methodological strength.</div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.5">Evidence hierarchy - most important dimension. Reflects methodological strength.</div>
             </div>
             <div style="padding:10px 14px;border-right:0.5px solid var(--border)">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:10px;height:10px;border-radius:2px;background:var(--green-l);border:1px solid var(--green-t)"></div><span style="font-size:11px;font-weight:600;color:var(--green-t)">Citations</span><span style="font-size:10px;background:var(--green-l);color:var(--green-t);padding:1px 6px;border-radius:4px;font-weight:600">max 25</span></div>
-              <div style="font-size:11px;color:var(--text2);line-height:1.5">Age-normalized: <code style="background:#f1efe8;padding:1px 3px;border-radius:3px;font-size:10px">cit ÷ years</code> — ranked by percentile within the batch. <span class="cit-hover"><span style="font-size:10px;color:var(--green-t);text-decoration:underline dotted;white-space:nowrap">ⓘ see example</span><div class="cit-tip"><div style="font-size:11px;font-weight:600;color:var(--green-t);margin-bottom:6px">Why age-normalize?</div><div style="font-size:11px;color:var(--text2);margin-bottom:8px">A 2010 paper has had more years to accumulate citations — raw counts always favor older papers.</div><div style="display:flex;flex-direction:column;gap:4px"><div style="background:#f1efe8;border-radius:5px;padding:5px 8px;font-size:10px;color:var(--text2)"><span style="font-weight:500">2010 paper</span><br>500 cit ÷ 15 yrs = <strong>33/yr</strong><span style="float:right;background:var(--blue-l);color:var(--blue-t);padding:1px 5px;border-radius:3px;font-weight:600">score 15</span></div><div style="background:#e8f5f0;border-radius:5px;padding:5px 8px;font-size:10px;color:var(--green-t)"><span style="font-weight:500">2023 paper</span><br>80 cit ÷ 2 yrs = <strong>40/yr ↑</strong><span style="float:right;background:var(--green-l);color:var(--green-t);padding:1px 5px;border-radius:3px;font-weight:600">score 20</span></div></div><div style="margin-top:6px;font-size:10px;color:var(--text3)">Fewer raw citations — but faster accumulation. Without normalization the 2010 paper would always win.</div></div></span></div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.5">Age-normalized: <code style="background:#f1efe8;padding:1px 3px;border-radius:3px;font-size:10px">cit ÷ years</code> - ranked by percentile within the batch. <span class="cit-hover"><span style="font-size:10px;color:var(--green-t);text-decoration:underline dotted;white-space:nowrap">ⓘ see example</span><div class="cit-tip"><div style="font-size:11px;font-weight:600;color:var(--green-t);margin-bottom:6px">Why age-normalize?</div><div style="font-size:11px;color:var(--text2);margin-bottom:8px">A 2010 paper has had more years to accumulate citations - raw counts always favor older papers.</div><div style="display:flex;flex-direction:column;gap:4px"><div style="background:#f1efe8;border-radius:5px;padding:5px 8px;font-size:10px;color:var(--text2)"><span style="font-weight:500">2010 paper</span><br>500 cit ÷ 15 yrs = <strong>33/yr</strong><span style="float:right;background:var(--blue-l);color:var(--blue-t);padding:1px 5px;border-radius:3px;font-weight:600">score 15</span></div><div style="background:#e8f5f0;border-radius:5px;padding:5px 8px;font-size:10px;color:var(--green-t)"><span style="font-weight:500">2023 paper</span><br>80 cit ÷ 2 yrs = <strong>40/yr ↑</strong><span style="float:right;background:var(--green-l);color:var(--green-t);padding:1px 5px;border-radius:3px;font-weight:600">score 20</span></div></div><div style="margin-top:6px;font-size:10px;color:var(--text3)">Fewer raw citations - but faster accumulation. Without normalization the 2010 paper would always win.</div></div></span></div>
             </div>
             <div style="padding:10px 14px;border-right:0.5px solid var(--border)">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:10px;height:10px;border-radius:2px;background:var(--amber-l);border:1px solid var(--amber-t)"></div><span style="font-size:11px;font-weight:600;color:var(--amber-t)">Landmark</span><span style="font-size:10px;background:var(--amber-l);color:var(--amber-t);padding:1px 6px;border-radius:4px;font-weight:600">max 25</span></div>
@@ -299,7 +299,7 @@ tr:hover td{background:#fafaf8}
             </div>
             <div style="padding:10px 14px;border-right:0.5px solid var(--border)">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:10px;height:10px;border-radius:2px;background:var(--purple-l);border:1px solid var(--purple-t)"></div><span style="font-size:11px;font-weight:600;color:var(--purple-t)">Scale</span><span style="font-size:10px;background:var(--purple-l);color:var(--purple-t);padding:1px 6px;border-radius:4px;font-weight:600">max 10</span></div>
-              <div style="font-size:11px;color:var(--text2);line-height:1.5">Multicenter (+5) and N patients. <strong>Not applicable</strong> to Review/Meta-Analysis/Guideline — those are normalized over 90 pts.</div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.5">Multicenter (+5) and N patients. <strong>Not applicable</strong> to Review/Meta-Analysis/Guideline - those are normalized over 90 pts.</div>
             </div>
             <div style="padding:10px 14px">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:10px;height:10px;border-radius:2px;background:var(--pink-l);border:1px solid var(--pink-t)"></div><span style="font-size:11px;font-weight:600;color:var(--pink-t)">Impact Factor</span><span style="font-size:10px;background:var(--pink-l);color:var(--pink-t);padding:1px 6px;border-radius:4px;font-weight:600">max 10</span></div>
@@ -357,9 +357,9 @@ tr:hover td{background:#fafaf8}
             </div>
           </div>
           <div style="border-top:0.5px solid var(--border);padding:10px 14px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
-            <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:var(--green);flex-shrink:0"></div><div style="font-size:11px"><span style="font-weight:600;color:var(--green-t)">Tier 1 · ≥ 70</span><br><span style="color:var(--text2)">TRAIN — always include</span></div></div>
-            <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:var(--blue);flex-shrink:0"></div><div style="font-size:11px"><span style="font-weight:600;color:var(--blue-t)">Tier 2 · 45–69</span><br><span style="color:var(--text2)">TRAIN — high quality</span></div></div>
-            <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:var(--amber);flex-shrink:0"></div><div style="font-size:11px"><span style="font-weight:600;color:var(--amber-t)">Tier 3 · 25–44</span><br><span style="color:var(--text2)">REVIEW — check before including</span></div></div>
+            <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:var(--green);flex-shrink:0"></div><div style="font-size:11px"><span style="font-weight:600;color:var(--green-t)">Tier 1 · ≥ 70</span><br><span style="color:var(--text2)">TRAIN - always include</span></div></div>
+            <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:var(--blue);flex-shrink:0"></div><div style="font-size:11px"><span style="font-weight:600;color:var(--blue-t)">Tier 2 · 45–69</span><br><span style="color:var(--text2)">TRAIN - high quality</span></div></div>
+            <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:var(--amber);flex-shrink:0"></div><div style="font-size:11px"><span style="font-weight:600;color:var(--amber-t)">Tier 3 · 25–44</span><br><span style="color:var(--text2)">REVIEW - check before including</span></div></div>
             <div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:#a32d2d;flex-shrink:0"></div><div style="font-size:11px"><span style="font-weight:600;color:var(--red-t)">Tier 4 · &lt; 25</span><br><span style="color:var(--text2)">EXCLUDE</span></div></div>
           </div>
         </div>
@@ -443,7 +443,7 @@ tr:hover td{background:#fafaf8}
                 <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:8px">Notes legend</div>
                 <div style="margin-bottom:7px"><div style="font-size:10px;font-weight:500;color:var(--text)">Paywalled - no access</div><div style="font-size:10px;color:var(--text2);line-height:1.4">Behind a paywall with no institutional access. Try downloading manually via DOI or PubMed.</div></div>
                 <div style="margin-bottom:7px"><div style="font-size:10px;font-weight:500;color:var(--text)">Institutional access needed</div><div style="font-size:10px;color:var(--text2);line-height:1.4">May be accessible through your institution's library subscription.</div></div>
-                <div style="margin-bottom:7px"><div style="font-size:10px;font-weight:500;color:var(--text)">Abstract only</div><div style="font-size:10px;color:var(--text2);line-height:1.4">Only the abstract is publicly available — full text cannot be obtained freely online.</div></div>
+                <div style="margin-bottom:7px"><div style="font-size:10px;font-weight:500;color:var(--text)">Abstract only</div><div style="font-size:10px;color:var(--text2);line-height:1.4">Only the abstract is publicly available - full text cannot be obtained freely online.</div></div>
                 <div style="margin-bottom:7px"><div style="font-size:10px;font-weight:500;color:var(--text)">Not found online</div><div style="font-size:10px;color:var(--text2);line-height:1.4">Cannot be found anywhere online. May be a very old paper or a citation error.</div></div>
                 <div style="margin-bottom:7px"><div style="font-size:10px;font-weight:500;color:var(--text)">Other</div><div style="font-size:10px;color:var(--text2);line-height:1.4">Any other reason not covered above.</div></div>
               </div>
@@ -470,7 +470,7 @@ tr:hover td{background:#fafaf8}
   <div class="tab-panel" id="tab-upload">
     <div style="max-width:680px">
       <h2 style="font-size:16px;font-weight:500;margin-bottom:6px">Import papers to LitVault</h2>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:20px">Select all your files at once — they'll be uploaded one by one with progress shown below. Papers are stored in the shared database and visible to your whole team immediately.</p>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:20px">Select all your files at once - they'll be uploaded one by one with progress shown below. Papers are stored in the shared database and visible to your whole team immediately.</p>
 
       <div class="drop-zone" id="up-drop">
         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="var(--text3)" stroke-width="1.5" style="margin:0 auto 12px;display:block">
@@ -478,7 +478,7 @@ tr:hover td{background:#fafaf8}
           <path d="M18 18v7M14 22l4-4 4 4"/>
         </svg>
         <div style="font-size:14px;font-weight:500;margin-bottom:4px">Drop all your files here</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:14px">.xlsx, .xls, .csv — select as many as you want</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px">.xlsx, .xls, .csv - select as many as you want</div>
         <label class="btn btn-primary" style="cursor:pointer;width:auto;display:inline-flex">
           Choose files
           <input type="file" id="up-input" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="handleUpload(this.files)">
@@ -528,7 +528,7 @@ tr:hover td{background:#fafaf8}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-// ── Config ─────────────────────────────────────────────────
+// Config
 const SURL='https://vtpdvkkizqdrzpotpfad.supabase.co';
 const SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0cGR2a2tpenFkcnpwb3RwZmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNDQwODUsImV4cCI6MjA5MTgyMDA4NX0.YyTDz0zW54ZPHye3vIl1BfL4OeCQ7irD1tluuY4fV3o';
 const db=supabase.createClient(SURL,SKEY,{
@@ -544,19 +544,19 @@ const PAGE=50;
 const NO_N=new Set(['Review','Meta-Analysis','Guideline']);
 const AV_COLORS=['#185FA5','#0F6E56','#BA7517','#534AB7','#993556','#D85A30','#3B6D11','#A32D2D'];
 
-// ── State ──────────────────────────────────────────────────
+// State
 let papers=[],filtered=[];
 let tier='ALL',selectedSources=new Set(['ALL']),q='',sortCol='_total',sortDir=-1,page=1;
 let yf=null,yt=null,journalFilter='',noteFilter='',domainFilter='';
 let actLog=[];
 let presenceCh=null;
 
-// ── Helpers ────────────────────────────────────────────────
+// Helpers
 const avCol=uid=>{let h=0;for(let c of(uid||''))h=((h<<5)-h)+c.charCodeAt(0);return AV_COLORS[Math.abs(h)%AV_COLORS.length];};
 const ini=n=>(n||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
 const pct=(n,t)=>t?`${Math.round(n/t*100)}%`:'0%';
 
-// ── Auth & Permissions ─────────────────────────────────────
+// Auth & Permissions
 let myName='', myRole='viewer';
 let myId=localStorage.getItem('lv-id')||(()=>{const id=crypto.randomUUID();localStorage.setItem('lv-id',id);return id;})();
 
@@ -590,27 +590,38 @@ async function doAuth(){
   if(!pass&&name!=='Guest'){errEl.textContent='Please enter your password.';errEl.className='auth-err err';errEl.style.display='block';return;}
 
   const btn=document.getElementById('auth-btn');
-  btn.textContent='Checking…'; btn.disabled=true;
+  const setStatus=(msg,isErr=false)=>{
+    btn.innerHTML=isErr?`Enter LitVault &rarr;`:`<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span>${msg}</span>`;
+    btn.disabled=!isErr;
+    if(isErr){errEl.textContent=msg;errEl.className='auth-err err';errEl.style.display='block';}
+    else{errEl.style.display='none';}
+  };
 
-  let hashHex='';
-  if(name!=='Guest'){
-    const hashBuf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pass));
-    hashHex=Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  try{
+    setStatus('Verifying identity…');
+    let hashHex='';
+    if(name!=='Guest'){
+      const hashBuf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pass));
+      hashHex=Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+
+    setStatus('Connecting to database…');
+    const{data,error}=await db.from('users').select('name,role').eq('name',name).eq('password_hash',hashHex).single();
+
+    if(error||!data){
+      setStatus('Incorrect password. Please try again.',true);
+      return;
+    }
+
+    setStatus('Loading your workspace…');
+    myName=data.name; myRole=data.role;
+    localStorage.setItem('lv-name',myName);
+    localStorage.setItem('lv-role',myRole);
+    showApp(); loadPapers(); loadGoal(); subscribeRealtime(); loadActivity();
+
+  }catch(e){
+    setStatus('Connection error - please try again.',true);
   }
-
-  const{data,error}=await db.from('users').select('name,role').eq('name',name).eq('password_hash',hashHex).single();
-
-  if(error||!data){
-    errEl.textContent='Incorrect password. Please try again.';
-    errEl.className='auth-err err'; errEl.style.display='block';
-    btn.textContent='Enter LitVault →'; btn.disabled=false;
-    return;
-  }
-
-  myName=data.name; myRole=data.role;
-  localStorage.setItem('lv-name',myName);
-  localStorage.setItem('lv-role',myRole);
-  showApp(); loadPapers(); loadGoal(); subscribeRealtime(); loadActivity();
 }
 
 function doSignOut(){
@@ -641,7 +652,7 @@ function showApp(){
   if(isGuest()){
     const banner=document.createElement('div');
     banner.style.cssText='background:#f1efe8;border-bottom:0.5px solid var(--border);padding:6px 20px;font-size:11px;color:var(--text2);text-align:center';
-    banner.textContent='👁 View-only mode — you can see all data in real time but cannot make changes.';
+    banner.textContent='👁 View-only mode - you can see all data in real time but cannot make changes.';
     document.querySelector('.tabs-bar').after(banner);
   }
 }
@@ -656,7 +667,6 @@ if(_savedName&&_savedRole){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-  loadUserList();
   const passInput=document.getElementById('auth-pass');
   if(passInput) passInput.addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();});
 });
@@ -669,7 +679,7 @@ function initApp(){
   document.getElementById('my-name').textContent=myName;
 }
 
-// ── Realtime ───────────────────────────────────────────────
+// Realtime
 function subscribeRealtime(){
   db.channel('papers-rt')
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'papers'},payload=>{
@@ -703,7 +713,7 @@ function renderOnline(){
   }).join('')+(users.length>6?`<span style="font-size:11px;color:var(--text2);margin-left:4px">+${users.length-6}</span>`:'');
 }
 
-// ── Load papers ────────────────────────────────────────────
+// Load papers
 async function loadPapers(){
   document.getElementById('pl').style.display='flex';
   document.getElementById('pc').style.display='none';
@@ -728,7 +738,7 @@ async function loadPapers(){
   document.getElementById('pc').style.display='block';
 }
 
-// ── Scoring ────────────────────────────────────────────────
+// Scoring
 const IF_MAP={
   "ca: a cancer journal for clinicians":227.365,
   "the new england journal of medicine":176.1,
@@ -1483,8 +1493,9 @@ function scoreScale(p){
   const n=parseFloat(p.number_of_patients)||0;
   if(n>=1000)pts+=5;else if(n>=300)pts+=3;else if(n>=100)pts+=2;else if(n>=1)pts+=1;
   return Math.min(10,pts);
+}
 
-// ── Strict two-level classification ───────────────────────
+// Strict two-level classification
 const TAXONOMY={
   'Coronary Physiology':[
     'FFR / iFR / RFR',
@@ -1609,7 +1620,7 @@ const CANONICAL_DOMAINS=Object.keys(TAXONOMY);
 const DOMAIN_LOWER={};
 CANONICAL_DOMAINS.forEach(d=>{ DOMAIN_LOWER[d.toLowerCase()]=d; });
 
-// Domain aliases — maps every real DB value to a canonical domain
+// Domain aliases - maps every real DB value to a canonical domain
 const DOMAIN_ALIASES={
   'cardiac ct':'Cardiac CT & MRI',
   'cardiac mri':'Cardiac CT & MRI',
@@ -1653,7 +1664,7 @@ function normalizeDomain(d){
   return (d||'').trim();
 }
 
-// Sub-domain aliases — domain-aware mappings based on real DB values
+// Sub-domain aliases - domain-aware mappings based on real DB values
 const SD_ALIASES={
   // Coronary Physiology
   'ffr':'FFR / iFR / RFR',
@@ -1666,7 +1677,7 @@ const SD_ALIASES={
   'angio-based physiology':'Angio-based physiology (QFR, FFRangio)',
   'cfr':'CFR (Coronary Flow Reserve)',
   'cfr (coronary flow reserve)':'CFR (Coronary Flow Reserve)',
-  // IMR is domain-specific — handled in normalizeSubDomain below
+  // IMR is domain-specific - handled in normalizeSubDomain below
   // Coronary Angiography & Quantification
   'coronary angiography (cag)':'Coronary angiography (CAG)',
   'coronary angiography':'Coronary angiography (CAG)',
@@ -1766,7 +1777,7 @@ const SD_ALIASES={
 
 function normalizeSubDomain(sd, domain){
   const k=(sd||'').trim().toLowerCase();
-  // If sub_domain looks like a canonical domain — data entry error, keep raw
+  // If sub_domain looks like a canonical domain - data entry error, keep raw
   if(DOMAIN_LOWER[k]) return (sd||'').trim();
   // Domain-specific overrides
   if(domain==='Coronary Physiology'&&k==='imr') return 'IMR (Index of Microvascular Resistance)';
@@ -1781,187 +1792,6 @@ function normalizeP(p){
   p.sub_domain=normalizeSubDomain(p.sub_domain, d);
   return p;
 }
-
-
-  'Coronary Physiology':[
-    'FFR / iFR / RFR',
-    'Angio-based physiology (QFR, FFRangio)',
-    'CFR (Coronary Flow Reserve)',
-    'IMR (Index of Microvascular Resistance)',
-  ],
-  'Coronary Angiography & Quantification':[
-    'Coronary angiography (CAG)',
-    '2D vs 3D reconstruction',
-    'QCA (Quantitative Coronary Analysis)',
-  ],
-  'PCI & Coronary Interventions':[
-    'Balloon angioplasty',
-    'Stents (DES, BVS)',
-    'CTO (Chronic Total Occlusion)',
-    'Bifurcation lesions',
-    'Left main disease',
-    'Complex PCI',
-  ],
-  'Plaque Modification':[
-    'Rotational atherectomy',
-    'Orbital atherectomy',
-    'Laser atherectomy',
-    'Intravascular lithotripsy (Shockwave)',
-  ],
-  'Intravascular Imaging':[
-    'IVUS (Intravascular Ultrasound)',
-    'OCT / OFDI',
-    'NIRS (Near-Infrared Spectroscopy)',
-  ],
-  'Perfusion & Ischemia':[
-    'SPECT',
-    'PET perfusion imaging',
-    'Stress perfusion MRI',
-    'Stress echocardiography',
-    'Absolute flow quantification',
-  ],
-  'Microvascular Disease':[
-    'IMR',
-    'INOCA / ANOCA',
-  ],
-  'Cardiac CT & MRI':[
-    'CT (CTA, FFR-CT)',
-    'Viability',
-    'Perfusion',
-    'Fibrosis (LGE)',
-    'Coronary CT angiography',
-    'Myocardial perfusion',
-    'Late gadolinium enhancement',
-    'Myocardial viability',
-  ],
-  'Echocardiography':[
-    'TTE (Transthoracic Echo)',
-    'TEE (Transesophageal Echo)',
-    'Stress echocardiography',
-    'Transthoracic',
-    'Transesophageal',
-  ],
-  'Electrophysiology & Arrhythmias':[
-    'Atrial fibrillation (AFib)',
-    'VT / VF',
-    'SVT',
-    'Electro-anatomical mapping',
-    'Ablation (RF / Cryo)',
-    'Navigation systems',
-  ],
-  'Cardiac Devices':[
-    'Pacemakers',
-    'ICD (Implantable Cardioverter Defibrillator)',
-    'CRT (Cardiac Resynchronization Therapy)',
-    'ICD',
-    'CRT',
-  ],
-  'Structural Heart Interventions':[
-    'TAVI / TAVR',
-    'MitraClip / TEER',
-    'Left atrial appendage (LAA) closure',
-    'TAVI',
-    'TAVR',
-    'MitraClip',
-  ],
-  'Heart Failure':[
-    'HFpEF / HFrEF',
-    'Hemodynamic monitoring',
-    'Mechanical support devices (LVAD)',
-    'HFpEF',
-    'HFrEF',
-    'LVAD',
-  ],
-  'Pharmacology':[
-    'Antithrombotic therapy',
-    'Lipid-lowering therapies',
-    'Heart failure therapies',
-  ],
-  'Acute Coronary Syndromes':[
-    'STEMI',
-    'NSTEMI',
-  ],
-  'Prevention & Risk Stratification':[
-    'Lipids',
-    'Atherosclerosis progression',
-    'Risk models',
-  ],
-  'Cardio-Metabolic Medicine':[
-    'Diabetes',
-    'Obesity',
-    'Metabolism',
-    'Insulin resistance',
-  ],
-  'Renal & System Interaction':[
-    'Cardio-renal interactions',
-    'Contrast-induced nephropathy',
-    'Fluid balance',
-  ],
-  'Core Scientific Foundations':[
-    'Hemodynamics',
-    'Vascular biology',
-    'Thrombosis & hemostasis',
-  ],
-  'AI & Data Layer':[
-    'Angio-based analysis',
-    'Imaging AI (IVUS/OCT automation)',
-    'Predictive models',
-    'Cardiac imaging',
-    'Coronary angiography analysis',
-  ],
-  'Guidelines':[
-    'ESC Guidelines',
-    'AHA / ACC Guidelines',
-    'Revascularization guidelines',
-  ],
-};
-
-// Build lowercase lookup maps
-const CANONICAL_DOMAINS=Object.keys(TAXONOMY);
-const DOMAIN_LOWER={};
-CANONICAL_DOMAINS.forEach(d=>{ DOMAIN_LOWER[d.toLowerCase()]=d; });
-
-// Domain aliases (various spellings → canonical)
-const DOMAIN_ALIASES={
-  'coronary physiology':'Coronary Physiology',
-  'coronary angiography & quantification':'Coronary Angiography & Quantification',
-  'coronary angiography and quantification':'Coronary Angiography & Quantification',
-  'coronar& quantification':'Coronary Angiography & Quantification',
-  'coronar & quantification':'Coronary Angiography & Quantification',
-  'pci & coronary interventions':'PCI & Coronary Interventions',
-  'pci and coronary interventions':'PCI & Coronary Interventions',
-  'plaque modification':'Plaque Modification',
-  'intravascular imaging':'Intravascular Imaging',
-  'perfusion & ischemia':'Perfusion & Ischemia',
-  'perfusion and ischemia':'Perfusion & Ischemia',
-  'microvascular disease':'Microvascular Disease',
-  'cardiac ct':'Cardiac CT & MRI',
-  'cardiac mri':'Cardiac CT & MRI',
-  'cardiac ct & mri':'Cardiac CT & MRI',
-  'cardiac ct and mri':'Cardiac CT & MRI',
-  'echocardiography':'Echocardiography',
-  'electrophysiology & arrhythmias':'Electrophysiology & Arrhythmias',
-  'electrophysiology and arrhythmias':'Electrophysiology & Arrhythmias',
-  'electrophysiology & arrhythmia':'Electrophysiology & Arrhythmias',
-  'cardiac devices':'Cardiac Devices',
-  'structural heart interventions':'Structural Heart Interventions',
-  'structural heart intervention':'Structural Heart Interventions',
-  'heart failure':'Heart Failure',
-  'pharmacology':'Pharmacology',
-  'acute coronary syndromes':'Acute Coronary Syndromes',
-  'acute coronary syndrome':'Acute Coronary Syndromes',
-  'prevention & risk stratification':'Prevention & Risk Stratification',
-  'prevention and risk stratification':'Prevention & Risk Stratification',
-  'cardio-metabolic medicine':'Cardio-Metabolic Medicine',
-  'cardiometabolic medicine':'Cardio-Metabolic Medicine',
-  'renal & system interaction':'Renal & System Interaction',
-  'renal and system interaction':'Renal & System Interaction',
-  'core scientific foundations':'Core Scientific Foundations',
-  'ai & data layer':'AI & Data Layer',
-  'ai and data layer':'AI & Data Layer',
-  'ai data layer':'AI & Data Layer',
-  'guidelines':'Guidelines',
-};
 
 function recompute(){
   updateDbBadge();
@@ -2006,7 +1836,7 @@ function getViewPapers(){
   return papers.filter(p=>selectedSources.has(p.source_file));
 }
 
-// ── Filters ────────────────────────────────────────────────
+// Filters
 let gapFilterMode=null;
 
 function applyFilters(){
@@ -2035,7 +1865,7 @@ function applyFilters(){
   page=1; renderAll();
 }
 
-// ── Render ─────────────────────────────────────────────────
+// Render
 function updateDbBadge(){
   const sources=[...new Set(papers.map(p=>p.source_file).filter(Boolean))];
   const el=document.getElementById('db-badge-text');
@@ -2273,7 +2103,7 @@ function renderPager(){
   document.getElementById('next-btn').disabled=page>=pages;
 }
 
-// ── Mark downloaded ────────────────────────────────────────
+// Mark downloaded
 async function toggleDl(id,markDl){
   const name=myName||'Unknown';
   const now=new Date().toISOString();
@@ -2282,10 +2112,10 @@ async function toggleDl(id,markDl){
     papers[idx].pdf_saved=markDl?'Yes':'No';
     papers[idx].downloaded_by_name=markDl?name:null;
     papers[idx].downloaded_at=markDl?now:null;
-    // Update metrics bar only (fast) — no full re-render
+    // Update metrics bar only (fast) - no full re-render
     renderMetrics();
   }
-  // Fire DB update in background — don't await before UI update
+  // Fire DB update in background - don't await before UI update
   db.from('papers').update({
     pdf_saved:markDl?'Yes':'No',
     downloaded_by_name:markDl?name:null,
@@ -2320,7 +2150,7 @@ async function toggleDl(id,markDl){
   }
 }
 
-// ── Upload ─────────────────────────────────────────────────
+// Upload
 document.addEventListener('DOMContentLoaded', ()=>{
 const upDrop=document.getElementById('up-drop');
 if(!upDrop) return;
@@ -2460,7 +2290,7 @@ function parseFile(file){
   });
 }
 
-// ── Activity ───────────────────────────────────────────────
+// Activity
 async function loadActivity(){
   const{data}=await db.from('download_log').select('*').order('created_at',{ascending:false}).limit(50);
   actLog=data||[];renderActivity();
@@ -2468,7 +2298,7 @@ async function loadActivity(){
 
 function renderActivity(){
   const el=document.getElementById('act-list');
-  if(!actLog.length){el.innerHTML='<div style="color:var(--text2);font-size:13px">No activity yet — start marking papers as downloaded!</div>';return;}
+  if(!actLog.length){el.innerHTML='<div style="color:var(--text2);font-size:13px">No activity yet - start marking papers as downloaded!</div>';return;}
   el.innerHTML=actLog.map(log=>{
     const col=avCol(log.user_id||'');
     const name=log.user_name||'Someone';
@@ -2484,7 +2314,7 @@ function renderActivity(){
   }).join('');
 }
 
-// ── Nav helpers ────────────────────────────────────────────
+// Nav helpers
 function copyTitle(title, btn){
   // Remove characters not allowed in Windows filenames: \ / : * ? " < > |
   // Also replace spaces with underscores
@@ -2534,7 +2364,7 @@ async function saveNote(id, value, sel){
   const idx=papers.findIndex(p=>p.id===id);
   if(idx>=0) papers[idx].team_notes=value||null;
   sel.value='';
-  // Update just the note chip in the DOM — no full re-render
+  // Update just the note chip in the DOM - no full re-render
   const tr=sel.closest('tr');
   if(tr){
     const NOTE_COLORS={
@@ -2738,7 +2568,7 @@ function toggleSubDash(){
   if(!open) renderSubDash();
 }
 
-// ── Sub-domain Goal ────────────────────────────────────────
+// Sub-domain Goal
 let sdGoal={target:20, deadline:'', updatedAt:''};
 
 async function loadGoal(){
@@ -2827,7 +2657,7 @@ function renderSubDash(){
       </div>
     </div>`;
 
-    // All 4 tiers — always shown
+    // All 4 tiers - always shown
     const tierRows=tiers.map((t,i)=>{
       const pct=tierCounts[i]?Math.round(tierDl[i]/tierCounts[i]*100):0;
       return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
@@ -2883,7 +2713,7 @@ function renderJournalFilter(){
       .filter(Boolean)
   )].sort((a,b)=>a.localeCompare(b));
   sel.innerHTML='<option value="">All journals</option>'
-    +'<option value="__none__">— No journal data</option>'
+    +'<option value="__none__">- No journal data</option>'
     +journals.map(j=>`<option value="${j.toLowerCase().replace(/"/g,'&quot;')}" ${journalFilter===j.toLowerCase()?'selected':''}>${j}</option>`).join('');
   if(current) sel.value=current;
 }
