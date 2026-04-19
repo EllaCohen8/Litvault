@@ -364,7 +364,12 @@ tr:hover td{background:#fafaf8}
           </div>
         </div>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:flex-start;max-height:120px;overflow-y:auto;padding-right:4px" id="src-chips"></div>
+      <div style="margin-bottom:8px">
+        <button onclick="toggleSrcChips()" style="font-size:10px;color:var(--text2);background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:4px" id="src-chips-toggle">
+          <span id="src-chips-chevron" style="font-size:9px">▶</span> Files <span id="src-chips-count" style="color:var(--text3)"></span>
+        </button>
+        <div id="src-chips" style="display:none;flex-wrap:wrap;gap:6px;margin-top:6px;max-height:120px;overflow-y:auto;padding-right:4px;align-items:flex-start"></div>
+      </div>
       <div class="tier-chips">
         <span class="tchip c-all" data-tier="ALL" onclick="setTier('ALL')">All</span>
         <span class="tchip c-t1" data-tier="Tier 1" onclick="setTier('Tier 1')">Tier 1</span>
@@ -719,15 +724,15 @@ async function loadPapers(){
   document.getElementById('pc').style.display='none';
   document.getElementById('pe').style.display='none';
 
-  // Fetch all rows in chunks of 1000 (Supabase default limit)
+  const COLS='id,serial_id,domain,sub_domain,full_title,year,journal,study_type,multicenter,number_of_patients,citation_count,landmark_study,impact_factor,short_name,source_file,pdf_saved,downloaded_by_name,downloaded_at,team_notes,doi,pubmed_link';
   let allData=[];
   let from=0;
-  const CHUNK=1000;
+  const CHUNK=2000;
   while(true){
-    const{data,error}=await db.from('papers').select('*').order('id').range(from,from+CHUNK-1);
+    const{data,error}=await db.from('papers').select(COLS).order('id').range(from,from+CHUNK-1);
     if(error){document.getElementById('pl').style.display='none';document.getElementById('pe').style.display='block';return;}
     if(data&&data.length>0) allData=allData.concat(data);
-    if(!data||data.length<CHUNK) break; // no more rows
+    if(!data||data.length<CHUNK) break;
     from+=CHUNK;
   }
 
@@ -1936,14 +1941,25 @@ function renderMetrics(){
     </div>`;
 }
 
+function toggleSrcChips(){
+  const el=document.getElementById('src-chips');
+  const ch=document.getElementById('src-chips-chevron');
+  const open=el.style.display!=='none';
+  el.style.display=open?'none':'flex';
+  if(ch) ch.textContent=open?'▶':'▼';
+}
+
 function renderSrcChips(){
   const sources=[...new Set(papers.map(p=>p.source_file).filter(Boolean))];
   const el=document.getElementById('src-chips');
-  if(sources.length<=1){el.style.display='none';return;}
-  el.style.display='flex';el.style.gap='6px';el.style.alignItems='center';el.style.flexWrap='wrap';
+  const toggle=document.getElementById('src-chips-toggle');
+  const countEl=document.getElementById('src-chips-count');
+  if(sources.length<=1){if(toggle)toggle.style.display='none';return;}
+  if(toggle)toggle.style.display='flex';
   const isAll=selectedSources.has('ALL');
-  el.innerHTML=`<span style="font-size:11px;color:var(--text3);flex-shrink:0">File:</span>
-    <span class="src-chip ${isAll?'active':''}" onclick="setSrc('ALL')">All (${papers.length.toLocaleString()})</span>`
+  const activeCount=isAll?0:[...selectedSources].length;
+  if(countEl) countEl.textContent=`(${sources.length} files${activeCount?', '+activeCount+' selected':''})`; 
+  el.innerHTML=`<span class="src-chip ${isAll?'active':''}" onclick="setSrc('ALL')">All (${papers.length.toLocaleString()})</span>`
     +sources.map(s=>{
       const n=papers.filter(p=>p.source_file===s).length;
       const short=s.replace(/\.(xlsx?|csv)$/i,'');
@@ -2597,42 +2613,88 @@ function renderSubDash(){
   const body=document.getElementById('subdash-body');
   if(!body||body.style.display==='none') return;
 
+  // Use ALL papers for totals verification - not filtered view
   const vp=getViewPapers();
-  const domains=[...new Set(vp.map(p=>(p.domain||'').trim()).filter(Boolean))].sort();
+  const allDomains=[...new Set(papers.map(p=>(p.domain||'').trim()).filter(Boolean))].sort();
+  const isDl=p=>String(p.pdf_saved||'').toLowerCase()==='yes';
+  const tiers=['Tier 1','Tier 2','Tier 3','Tier 4'];
+  const TC=[
+    {label:'T1',bg:'var(--green)',light:'var(--green-l)',text:'var(--green-t)'},
+    {label:'T2',bg:'var(--blue)', light:'var(--blue-l)', text:'var(--blue-t)'},
+    {label:'T3',bg:'var(--amber)',light:'var(--amber-l)',text:'var(--amber-t)'},
+    {label:'T4',bg:'#a32d2d',    light:'var(--red-l)',  text:'var(--red-t)'},
+  ];
+  const goalTarget=sdGoal.target||20;
+  const goalDeadline=sdGoal.deadline||'';
 
-  // Domain chips
+  // Numbered domain chips
   const chipEl=document.getElementById('subdash-domain-chips');
-  chipEl.innerHTML=`<span onclick="setSubDashDomain('ALL')" style="font-size:10px;font-weight:500;padding:2px 10px;border-radius:10px;cursor:pointer;user-select:none;background:${subdashDomain==='ALL'?'#1a1a1a':'var(--bg2)'};color:${subdashDomain==='ALL'?'#fff':'var(--text2)'};border:0.5px solid var(--border)">All</span>`
-    +domains.map(d=>`<span onclick="setSubDashDomain('${d.replace(/'/g,"\\'")}')" style="font-size:10px;font-weight:500;padding:2px 10px;border-radius:10px;cursor:pointer;user-select:none;background:${subdashDomain===d?'#1a1a1a':'var(--bg2)'};color:${subdashDomain===d?'#fff':'var(--text2)'};border:0.5px solid var(--border)">${d}</span>`).join('');
+  chipEl.innerHTML=`<span onclick="setSubDashDomain('ALL')" style="font-size:10px;font-weight:500;padding:2px 8px;border-radius:10px;cursor:pointer;user-select:none;background:${subdashDomain==='ALL'?'#1a1a1a':'var(--bg2)'};color:${subdashDomain==='ALL'?'#fff':'var(--text2)'};border:0.5px solid var(--border)">All</span>`
+    +allDomains.map((d,i)=>`<span onclick="setSubDashDomain('${d.replace(/'/g,"\\'")}')" title="${d}" style="font-size:10px;font-weight:500;padding:2px 8px;border-radius:10px;cursor:pointer;user-select:none;background:${subdashDomain===d?'#1a1a1a':'var(--bg2)'};color:${subdashDomain===d?'#fff':'var(--text2)'};border:0.5px solid var(--border)">${i+1}. ${d.length>18?d.slice(0,18)+'…':d}</span>`).join('');
 
   const filtered_vp=subdashDomain==='ALL'?vp:vp.filter(p=>(p.domain||'').trim()===subdashDomain);
   const subdomains=[...new Set(filtered_vp.map(p=>(p.sub_domain||'').trim()).filter(Boolean))].sort();
+
+  // Summary view (ALL tab)
+  let summaryHtml='';
+  if(subdashDomain==='ALL'){
+    // Global totals verified across all papers
+    const t1all=papers.filter(p=>p._tier==='Tier 1');
+    const t2all=papers.filter(p=>p._tier==='Tier 2');
+    const t3all=papers.filter(p=>p._tier==='Tier 3');
+    const t4all=papers.filter(p=>p._tier==='Tier 4');
+    const t1dl=t1all.filter(isDl).length;
+    const totalSDs=subdomains.length;
+    const sdsMeetingGoal=subdomains.filter(sd=>{
+      const sdp=filtered_vp.filter(p=>(p.sub_domain||'').trim()===sd);
+      return sdp.filter(p=>p._tier==='Tier 1'&&isDl(p)).length>=goalTarget;
+    }).length;
+    const totalT1needed=Math.max(0,totalSDs*goalTarget - t1dl);
+    const overallGoalPct=Math.min(100,Math.round(t1dl/(totalSDs*goalTarget)*100));
+    const goalCol=overallGoalPct>=100?'var(--green)':overallGoalPct>=50?'var(--blue)':'var(--amber)';
+
+    summaryHtml=`<div style="background:var(--bg2);border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      <div style="text-align:center">
+        <div style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">T1 Total</div>
+        <div style="font-size:18px;font-weight:500;color:var(--green-t)">${t1all.length.toLocaleString()}</div>
+        <div style="font-size:10px;color:var(--text2)">${t1dl} downloaded</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Goal progress</div>
+        <div style="font-size:18px;font-weight:500;color:${goalCol}">${overallGoalPct}%</div>
+        <div style="font-size:10px;color:var(--text2)">${sdsMeetingGoal}/${totalSDs} sub-domains</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Still needed</div>
+        <div style="font-size:18px;font-weight:500;color:#a32d2d">${totalT1needed.toLocaleString()}</div>
+        <div style="font-size:10px;color:var(--text2)">T1 downloads to find</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Tier breakdown</div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.8">
+          <span style="color:var(--green-t)">T1: ${t1all.length}</span> &nbsp;
+          <span style="color:var(--blue-t)">T2: ${t2all.length}</span><br>
+          <span style="color:var(--amber-t)">T3: ${t3all.length}</span> &nbsp;
+          <span style="color:var(--red-t)">T4: ${t4all.length}</span>
+        </div>
+      </div>
+    </div>`;
+  }
 
   if(!subdomains.length){
     document.getElementById('subdash-table').innerHTML='<div style="color:var(--text2);font-size:12px">No data</div>';
     return;
   }
 
-  const TC=[
-    {label:'T1',bg:'var(--green)',  light:'var(--green-l)',  text:'var(--green-t)'},
-    {label:'T2',bg:'var(--blue)',   light:'var(--blue-l)',   text:'var(--blue-t)'},
-    {label:'T3',bg:'var(--amber)',  light:'var(--amber-l)',  text:'var(--amber-t)'},
-    {label:'T4',bg:'#a32d2d',       light:'var(--red-l)',    text:'var(--red-t)'},
-  ];
-  const tiers=['Tier 1','Tier 2','Tier 3','Tier 4'];
-  const isDl=p=>String(p.pdf_saved||'').toLowerCase()==='yes';
-
   // Goal header
-  const goalTarget=sdGoal.target||20;
-  const goalDeadline=sdGoal.deadline||'';
-  const goalHeader=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+  const goalHeader=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
     <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:11px;font-weight:500;color:var(--text)">🎯 T1 Goal: <strong>${goalTarget}</strong> downloads per sub-domain</span>
-      ${goalDeadline?`<span style="font-size:10px;color:var(--text3)">by ${goalDeadline}</span>`:''}
+      <span style="font-size:11px;font-weight:500;color:var(--text)">T1 Goal: <strong>${goalTarget}</strong> downloads/sub-domain${goalDeadline?` by ${goalDeadline}`:''}</span>
     </div>
-    ${isAdmin()?`<button class="btn" onclick="openGoalEditor()" style="font-size:10px;padding:3px 8px;gap:4px">✏ Edit goal</button>`:''}
+    ${isAdmin()?`<button class="btn" onclick="openGoalEditor()" style="font-size:10px;padding:3px 8px">Edit goal</button>`:''}
   </div>`;
 
+  // Compact cards
   const cards=subdomains.map(sd=>{
     const sdPapers=filtered_vp.filter(p=>(p.sub_domain||'').trim()===sd);
     const total=sdPapers.length;
@@ -2640,51 +2702,41 @@ function renderSubDash(){
     const tierPapers=tiers.map(t=>sdPapers.filter(p=>p._tier===t));
     const tierCounts=tierPapers.map(arr=>arr.length);
     const tierDl=tierPapers.map(arr=>arr.filter(isDl).length);
-    const totalDl=tierDl.reduce((a,b)=>a+b,0);
-    const dlPct=total?Math.round(totalDl/total*100):0;
-
-    // T1 goal progress
     const t1Dl=tierDl[0];
-    const goalPct=Math.min(100,Math.round(t1Dl/goalTarget*100));
-    const goalCol=goalPct>=100?'var(--green)':goalPct>=50?'var(--blue)':'var(--amber)';
-    const goalBar=`<div style="margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border)">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-        <span style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">T1 Goal</span>
-        <span style="font-size:10px;color:${goalCol};font-weight:500">${t1Dl}/${goalTarget} · ${goalPct}%</span>
-      </div>
-      <div style="background:var(--bg2);border-radius:3px;height:5px;overflow:hidden">
-        <div style="width:${goalPct}%;height:100%;background:${goalCol};border-radius:3px;transition:width .3s"></div>
-      </div>
-    </div>`;
+    const t1Count=tierCounts[0];
 
-    // All 4 tiers - always shown
-    const tierRows=tiers.map((t,i)=>{
-      const pct=tierCounts[i]?Math.round(tierDl[i]/tierCounts[i]*100):0;
-      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-        <span style="font-size:10px;font-weight:600;padding:1px 5px;border-radius:3px;background:${TC[i].light};color:${TC[i].text};width:22px;text-align:center;flex-shrink:0">${TC[i].label}</span>
-        <div style="flex:1;background:var(--bg2);border-radius:3px;height:5px;overflow:hidden">
-          <div style="width:${pct}%;height:100%;background:${TC[i].bg};border-radius:3px"></div>
-        </div>
-        <span style="font-size:10px;color:var(--text2);min-width:36px;text-align:right">${tierDl[i]}/${tierCounts[i]}</span>
-      </div>`;
-    }).join('');
+    // Goal gap indicator
+    const missing=Math.max(0,goalTarget-t1Dl);
+    const goalPct=Math.min(100,Math.round(t1Dl/goalTarget*100));
+    const goalCol=goalPct>=100?'var(--green)':goalPct>=50?'var(--blue)':goalPct>0?'var(--amber)':'#a32d2d';
+    const missingChip=missing>0
+      ?`<span style="font-size:9px;background:var(--red-l);color:var(--red-t);padding:1px 5px;border-radius:3px;flex-shrink:0">-${missing} needed</span>`
+      :`<span style="font-size:9px;background:var(--green-l);color:var(--green-t);padding:1px 5px;border-radius:3px;flex-shrink:0">Goal met!</span>`;
+
+    // Compact tier row: T1 T2 T3 T4 on one line
+    const tierInline=tiers.map((t,i)=>`<span style="font-size:9px;font-weight:600;padding:1px 4px;border-radius:3px;background:${TC[i].light};color:${TC[i].text}">${TC[i].label}: ${tierDl[i]}/${tierCounts[i]}</span>`).join(' ');
 
     return `<div onclick="filterBySubDomain('${sd.replace(/'/g,"\\'")}','${domainLabel.replace(/'/g,"\\'")}')"
-      style="background:#fff;border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;cursor:pointer;transition:border-color .15s"
+      style="background:#fff;border:0.5px solid var(--border);border-radius:var(--r);padding:8px 10px;cursor:pointer;transition:border-color .15s"
       onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-        <div style="font-size:12px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%" title="${sd}">${sd}</div>
-        <div style="font-size:10px;color:var(--text3);flex-shrink:0">${totalDl}/${total} · ${dlPct}%</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;gap:4px">
+        <div style="font-size:11px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${sd}">${sd}</div>
+        ${missingChip}
       </div>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:7px">${domainLabel}</div>
-      ${tierRows}
-      ${goalBar}
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:5px">
+        <div style="flex:1;background:var(--bg2);border-radius:3px;height:4px;overflow:hidden">
+          <div style="width:${goalPct}%;height:100%;background:${goalCol};border-radius:3px"></div>
+        </div>
+        <span style="font-size:9px;color:${goalCol};font-weight:500;min-width:28px;text-align:right">${goalPct}%</span>
+      </div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap">${tierInline}</div>
     </div>`;
   }).join('');
 
   document.getElementById('subdash-table').innerHTML=`
+    ${summaryHtml}
     ${goalHeader}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px">${cards}</div>`;
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px">${cards}</div>`;
 }
 
 function setSubDashDomain(d){
