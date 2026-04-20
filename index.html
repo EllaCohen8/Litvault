@@ -1793,6 +1793,27 @@ function normalizeP(p){
   return p;
 }
 
+// Normalize any user input ("1", "Tier 2", "T3", "tier 4") to 'Tier N' or null
+function normTier(v){
+  if(v===null||v===undefined)return null;
+  const s=String(v).trim().toLowerCase();
+  if(!s||s==='nan'||s==='null')return null;
+  const m=s.match(/[1-4]/);
+  return m?`Tier ${m[0]}`:null;
+}
+function flagFromTier(t){
+  return (t==='Tier 1'||t==='Tier 2')?'TRAIN':(t==='Tier 3'?'REVIEW':'EXCLUDE');
+}
+// Write classified tiers back to DB so next load is cached
+async function flushTierQueue(queue){
+  const CHUNK=500;
+  for(let i=0;i<queue.length;i+=CHUNK){
+    const{error}=await db.from('papers').upsert(queue.slice(i,i+CHUNK),{onConflict:'id'});
+    if(error){console.warn('tier write-back failed',error);return;}
+  }
+  console.log(`Tier classification persisted for ${queue.length} papers`);
+}
+
 function recompute(){
   updateDbBadge();
   const yrs=papers.map(p=>parseInt(p.year)||CY);
@@ -1806,6 +1827,7 @@ function recompute(){
     if(r>=0.95)return 25;if(r>=0.85)return 20;if(r>=0.70)return 15;
     if(r>=0.40)return 10;if(r>=0.10)return 5;return 2;
   }
+  const tierWriteQueue=[];
   papers.forEach((p,i)=>{
     const s1=ST_PTS[String(p.study_type||'').trim()]||3;
     const s2=citPts(cpy[i]);
@@ -1814,9 +1836,18 @@ function recompute(){
     const s5=scoreIF(p.journal,p.impact_factor);
     const noN=NO_N.has(String(p.study_type||'').trim());
     const total=noN?Math.min(100,Math.round((s1+s2+s3+s5)/90*100)):Math.min(100,s1+s2+s3+s4+s5);
-    let t,f;
-    if(total>=70){t='Tier 1';f='TRAIN';}else if(total>=45){t='Tier 2';f='TRAIN';}
-    else if(total>=25){t='Tier 3';f='REVIEW';}else{t='Tier 4';f='EXCLUDE';}
+    const dbTier=normTier(p.tier);
+    let t;
+    if(dbTier){
+      t=dbTier;
+    }else{
+      if(total>=70)t='Tier 1';
+      else if(total>=45)t='Tier 2';
+      else if(total>=25)t='Tier 3';
+      else t='Tier 4';
+      if(p.id!=null)tierWriteQueue.push({id:p.id,tier:t});
+    }
+    const f=flagFromTier(t);
     p._s1=s1;p._s2=s2;p._s3=s3;p._s4=noN?null:s4;p._s5=s5;
     p._total=total;p._tier=t;p._flag=f;p._cpy=Math.round(cpy[i]*10)/10;
     p._ifUsed=getIF(p.journal,p.impact_factor);p._noN=noN;p._idx=i+1;
@@ -1829,6 +1860,7 @@ function recompute(){
     if(!p._ifUsed)gaps.push('Impact Factor');
     p._gaps=gaps; p._hasGap=gaps.length>0;
   });
+  if(tierWriteQueue.length)flushTierQueue(tierWriteQueue);
 }
 
 function getViewPapers(){
@@ -2226,6 +2258,7 @@ async function handleUpload(files){
         citation_count:parseFloat(r['Citation Count']||r['citation_count'])||null,
         landmark_study:r['Landmark Study']||r['landmark_study']||'No',
         impact_factor:parseFloat(r['Impact Factor']||r['impact_factor'])||null,
+        tier:normTier(r['Tier']||r['tier']),
         source_file:file.name,
       })).filter(r=>r.full_title);
 
