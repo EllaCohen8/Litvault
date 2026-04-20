@@ -1786,12 +1786,10 @@ function normalizeSubDomain(sd, domain){
   return SD_ALIASES[k]||(sd||'').trim();
 }
 
-function normalizeP(p){
-  const d=normalizeDomain(p.domain);
-  p.domain=d;
-  p.sub_domain=normalizeSubDomain(p.sub_domain, d);
-  return p;
-}
+// DB values for domain/sub_domain are already canonical (matched against
+// the closed lists in domains.txt + subdomains.txt). No client-side
+// normalization — UI displays exactly what's stored.
+function normalizeP(p){ return p; }
 
 // Normalize any user input ("1", "Tier 2", "T3", "tier 4") to 'Tier N' or null
 function normTier(v){
