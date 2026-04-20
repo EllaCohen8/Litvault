@@ -681,10 +681,22 @@ function initApp(){
 
 // Realtime
 function subscribeRealtime(){
+  // Fields that feed into tier scoring — a change to any of these means recompute.
+  // Everything else (pdf_saved, downloaded_by_name, downloaded_at, team_notes, tier)
+  // can take a much cheaper render path.
+  const SCORING_FIELDS=['study_type','citation_count','number_of_patients','impact_factor','journal','landmark_study','year'];
   db.channel('papers-rt')
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'papers'},payload=>{
       const i=papers.findIndex(p=>p.id===payload.new.id);
-      if(i>=0){papers[i]={...papers[i],...payload.new};recompute();applyFilters();}
+      if(i<0)return;
+      const needRescoring=SCORING_FIELDS.some(f=>papers[i][f]!==payload.new[f]);
+      // In-place merge so any reference held in `filtered` stays valid
+      Object.assign(papers[i], payload.new);
+      if(needRescoring){
+        recompute(); applyFilters();
+      }else{
+        renderMetrics(); renderTable();
+      }
     })
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'papers'},payload=>{
       papers.push(normalizeP(payload.new));recompute();applyFilters();
