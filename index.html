@@ -1805,19 +1805,22 @@ function flagFromTier(t){
   return (t==='Tier 1'||t==='Tier 2')?'TRAIN':(t==='Tier 3'?'REVIEW':'EXCLUDE');
 }
 // Write classified tiers back to DB so next load is cached.
-// Group by tier (only 4 values) → one UPDATE per tier using .in() on ids.
+// Group by tier (4 values) → UPDATE with .in() on ids, small chunks to keep URL under PostgREST limits.
 async function flushTierQueue(queue){
   const byTier={};
   queue.forEach(({id,tier})=>{(byTier[tier]=byTier[tier]||[]).push(id);});
-  const CHUNK=1000;
+  const CHUNK=100; // ~100 UUIDs keeps the request URL well under ~4KB
+  let done=0;
   for(const t of Object.keys(byTier)){
     const ids=byTier[t];
     for(let i=0;i<ids.length;i+=CHUNK){
-      const{error}=await db.from('papers').update({tier:t}).in('id',ids.slice(i,i+CHUNK));
-      if(error){console.warn('tier write-back failed',error);return;}
+      const batch=ids.slice(i,i+CHUNK);
+      const{error}=await db.from('papers').update({tier:t}).in('id',batch);
+      if(error){console.warn('tier write-back failed',error.message||error,error);return;}
+      done+=batch.length;
     }
   }
-  console.log(`Tier classification persisted for ${queue.length} papers`);
+  console.log(`Tier classification persisted for ${done} papers`);
 }
 
 function recompute(){
