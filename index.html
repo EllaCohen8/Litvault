@@ -1804,12 +1804,18 @@ function normTier(v){
 function flagFromTier(t){
   return (t==='Tier 1'||t==='Tier 2')?'TRAIN':(t==='Tier 3'?'REVIEW':'EXCLUDE');
 }
-// Write classified tiers back to DB so next load is cached
+// Write classified tiers back to DB so next load is cached.
+// Group by tier (only 4 values) → one UPDATE per tier using .in() on ids.
 async function flushTierQueue(queue){
-  const CHUNK=500;
-  for(let i=0;i<queue.length;i+=CHUNK){
-    const{error}=await db.from('papers').upsert(queue.slice(i,i+CHUNK),{onConflict:'id'});
-    if(error){console.warn('tier write-back failed',error);return;}
+  const byTier={};
+  queue.forEach(({id,tier})=>{(byTier[tier]=byTier[tier]||[]).push(id);});
+  const CHUNK=1000;
+  for(const t of Object.keys(byTier)){
+    const ids=byTier[t];
+    for(let i=0;i<ids.length;i+=CHUNK){
+      const{error}=await db.from('papers').update({tier:t}).in('id',ids.slice(i,i+CHUNK));
+      if(error){console.warn('tier write-back failed',error);return;}
+    }
   }
   console.log(`Tier classification persisted for ${queue.length} papers`);
 }
