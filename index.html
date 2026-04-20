@@ -1793,6 +1793,46 @@ function normalizeP(p){
   return p;
 }
 
+// Normalize any user input ("1", "Tier 2", "T3", "tier 4") to 'Tier N' or null
+function normTier(v){
+  if(v===null||v===undefined)return null;
+  const s=String(v).trim().toLowerCase();
+  if(!s||s==='nan'||s==='null')return null;
+  const m=s.match(/[1-4]/);
+  return m?`Tier ${m[0]}`:null;
+}
+function flagFromTier(t){
+  return (t==='Tier 1'||t==='Tier 2')?'TRAIN':(t==='Tier 3'?'REVIEW':'EXCLUDE');
+}
+// Write classified tiers back to DB so next load is cached.
+// Group by tier (4 values) → UPDATE with .in() on ids, small chunks to keep URL under PostgREST limits.
+async function flushTierQueue(queue){
+  const byTier={};
+  queue.forEach(({id,tier})=>{(byTier[tier]=byTier[tier]||[]).push(id);});
+  const CHUNK=100;
+  let done=0,failed=0,totalBatches=0;
+  for(const t of Object.keys(byTier))totalBatches+=Math.ceil(byTier[t].length/CHUNK);
+  console.log(`Tier back-fill starting: ${queue.length} papers, ${totalBatches} batches`);
+  let batchNum=0;
+  for(const t of Object.keys(byTier)){
+    const ids=byTier[t];
+    for(let i=0;i<ids.length;i+=CHUNK){
+      batchNum++;
+      const batch=ids.slice(i,i+CHUNK);
+      try{
+        const{error}=await db.from('papers').update({tier:t}).in('id',batch);
+        if(error){failed+=batch.length;console.warn(`Batch ${batchNum}/${totalBatches} failed:`,error.message||error);}
+        else{done+=batch.length;}
+      }catch(e){
+        failed+=batch.length;
+        console.warn(`Batch ${batchNum}/${totalBatches} threw:`,e.message||e);
+      }
+      if(batchNum%25===0)console.log(`Tier back-fill progress: ${batchNum}/${totalBatches} batches (${done} OK, ${failed} failed)`);
+    }
+  }
+  console.log(`Tier back-fill complete: ${done} persisted, ${failed} failed`);
+}
+
 function recompute(){
   updateDbBadge();
   const yrs=papers.map(p=>parseInt(p.year)||CY);
@@ -1806,6 +1846,7 @@ function recompute(){
     if(r>=0.95)return 25;if(r>=0.85)return 20;if(r>=0.70)return 15;
     if(r>=0.40)return 10;if(r>=0.10)return 5;return 2;
   }
+  const tierWriteQueue=[];
   papers.forEach((p,i)=>{
     const s1=ST_PTS[String(p.study_type||'').trim()]||3;
     const s2=citPts(cpy[i]);
@@ -1814,9 +1855,18 @@ function recompute(){
     const s5=scoreIF(p.journal,p.impact_factor);
     const noN=NO_N.has(String(p.study_type||'').trim());
     const total=noN?Math.min(100,Math.round((s1+s2+s3+s5)/90*100)):Math.min(100,s1+s2+s3+s4+s5);
-    let t,f;
-    if(total>=70){t='Tier 1';f='TRAIN';}else if(total>=45){t='Tier 2';f='TRAIN';}
-    else if(total>=25){t='Tier 3';f='REVIEW';}else{t='Tier 4';f='EXCLUDE';}
+    const dbTier=normTier(p.tier);
+    let t;
+    if(dbTier){
+      t=dbTier;
+    }else{
+      if(total>=70)t='Tier 1';
+      else if(total>=45)t='Tier 2';
+      else if(total>=25)t='Tier 3';
+      else t='Tier 4';
+      if(p.id!=null)tierWriteQueue.push({id:p.id,tier:t});
+    }
+    const f=flagFromTier(t);
     p._s1=s1;p._s2=s2;p._s3=s3;p._s4=noN?null:s4;p._s5=s5;
     p._total=total;p._tier=t;p._flag=f;p._cpy=Math.round(cpy[i]*10)/10;
     p._ifUsed=getIF(p.journal,p.impact_factor);p._noN=noN;p._idx=i+1;
@@ -1829,6 +1879,7 @@ function recompute(){
     if(!p._ifUsed)gaps.push('Impact Factor');
     p._gaps=gaps; p._hasGap=gaps.length>0;
   });
+  if(tierWriteQueue.length)flushTierQueue(tierWriteQueue).catch(e=>console.warn('flushTierQueue crashed:',e.message||e));
 }
 
 function getViewPapers(){
@@ -2226,6 +2277,7 @@ async function handleUpload(files){
         citation_count:parseFloat(r['Citation Count']||r['citation_count'])||null,
         landmark_study:r['Landmark Study']||r['landmark_study']||'No',
         impact_factor:parseFloat(r['Impact Factor']||r['impact_factor'])||null,
+        tier:normTier(r['Tier']||r['tier']),
         source_file:file.name,
       })).filter(r=>r.full_title);
 
