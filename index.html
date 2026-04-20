@@ -1809,18 +1809,28 @@ function flagFromTier(t){
 async function flushTierQueue(queue){
   const byTier={};
   queue.forEach(({id,tier})=>{(byTier[tier]=byTier[tier]||[]).push(id);});
-  const CHUNK=100; // ~100 UUIDs keeps the request URL well under ~4KB
-  let done=0;
+  const CHUNK=100;
+  let done=0,failed=0,totalBatches=0;
+  for(const t of Object.keys(byTier))totalBatches+=Math.ceil(byTier[t].length/CHUNK);
+  console.log(`Tier back-fill starting: ${queue.length} papers, ${totalBatches} batches`);
+  let batchNum=0;
   for(const t of Object.keys(byTier)){
     const ids=byTier[t];
     for(let i=0;i<ids.length;i+=CHUNK){
+      batchNum++;
       const batch=ids.slice(i,i+CHUNK);
-      const{error}=await db.from('papers').update({tier:t}).in('id',batch);
-      if(error){console.warn('tier write-back failed',error.message||error,error);return;}
-      done+=batch.length;
+      try{
+        const{error}=await db.from('papers').update({tier:t}).in('id',batch);
+        if(error){failed+=batch.length;console.warn(`Batch ${batchNum}/${totalBatches} failed:`,error.message||error);}
+        else{done+=batch.length;}
+      }catch(e){
+        failed+=batch.length;
+        console.warn(`Batch ${batchNum}/${totalBatches} threw:`,e.message||e);
+      }
+      if(batchNum%25===0)console.log(`Tier back-fill progress: ${batchNum}/${totalBatches} batches (${done} OK, ${failed} failed)`);
     }
   }
-  console.log(`Tier classification persisted for ${done} papers`);
+  console.log(`Tier back-fill complete: ${done} persisted, ${failed} failed`);
 }
 
 function recompute(){
@@ -1869,7 +1879,7 @@ function recompute(){
     if(!p._ifUsed)gaps.push('Impact Factor');
     p._gaps=gaps; p._hasGap=gaps.length>0;
   });
-  if(tierWriteQueue.length)flushTierQueue(tierWriteQueue);
+  if(tierWriteQueue.length)flushTierQueue(tierWriteQueue).catch(e=>console.warn('flushTierQueue crashed:',e.message||e));
 }
 
 function getViewPapers(){
