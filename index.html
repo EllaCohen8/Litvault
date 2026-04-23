@@ -725,29 +725,66 @@ function renderOnline(){
   }).join('')+(users.length>6?`<span style="font-size:11px;color:var(--text2);margin-left:4px">+${users.length-6}</span>`:'');
 }
 
-// Load papers
+// Load papers — two-phase for fast first paint.
+// Phase 1 (blocking): T1 + T2 only (~8.8k rows). UI becomes interactive.
+// Phase 2 (background): T3 + T4 fetched after UI is up, merged in silently.
 async function loadPapers(){
   document.getElementById('pl').style.display='flex';
   document.getElementById('pc').style.display='none';
   document.getElementById('pe').style.display='none';
 
-  // Fetch all rows in chunks of 1000 (Supabase default limit)
-  let allData=[];
-  let from=0;
   const CHUNK=1000;
-  while(true){
-    const{data,error}=await db.from('papers').select('*').order('id').range(from,from+CHUNK-1);
-    if(error){document.getElementById('pl').style.display='none';document.getElementById('pe').style.display='block';return;}
-    if(data&&data.length>0) allData=allData.concat(data);
-    if(!data||data.length<CHUNK) break; // no more rows
-    from+=CHUNK;
+  async function fetchByTiers(tiers){
+    const out=[];
+    let from=0;
+    while(true){
+      const{data,error}=await db.from('papers').select('*').in('tier',tiers).order('id').range(from,from+CHUNK-1);
+      if(error) throw error;
+      if(data&&data.length) out.push(...data);
+      if(!data||data.length<CHUNK) break;
+      from+=CHUNK;
+    }
+    return out;
+  }
+
+  // Phase 1: priority tiers
+  let phase1;
+  try{
+    phase1=await fetchByTiers(['Tier 1','Tier 2']);
+  }catch(e){
+    console.warn('Phase 1 load failed:',e);
+    document.getElementById('pl').style.display='none';
+    document.getElementById('pe').style.display='block';
+    return;
   }
 
   document.getElementById('pl').style.display='none';
-  if(!allData.length){document.getElementById('pe').style.display='block';return;}
-  papers=allData.map(normalizeP);
+  if(!phase1.length){document.getElementById('pe').style.display='block';return;}
+  papers=phase1.map(normalizeP);
   recompute(); applyFilters();
   document.getElementById('pc').style.display='block';
+
+  // Phase 2: everything else, in the background
+  const badge=document.getElementById('db-badge');
+  let tag;
+  if(badge){
+    tag=document.createElement('span');
+    tag.id='bg-load-tag';
+    tag.style.cssText='margin-left:8px;font-size:10px;color:var(--text3);font-style:italic';
+    tag.textContent='· loading T3/T4…';
+    badge.parentNode.insertBefore(tag,badge.nextSibling);
+  }
+  try{
+    const phase2=await fetchByTiers(['Tier 3','Tier 4']);
+    if(phase2.length){
+      papers.push(...phase2.map(normalizeP));
+      recompute(); applyFilters();
+    }
+  }catch(e){
+    console.warn('Phase 2 load failed:',e);
+  }finally{
+    tag?.remove();
+  }
 }
 
 // Scoring
