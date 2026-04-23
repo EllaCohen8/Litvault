@@ -2055,15 +2055,15 @@ function renderTable(){
       s4cell=cell(raw(`${mc?'<strong>Multicenter</strong>':'Single'} · ${np>0?`N = ${np.toLocaleString()}`:'<span style="color:#c00">N missing</span>'}`),p._s4,10,'dp-sc');
     }
 
-    // PDF cell
+    // PDF cell. DB values are canonical and match the on-disk folder names
+    // exactly (including spaces for "Case Report", "Insulin resistance",
+    // "Left atrial appendage (LAA) closure", etc.) — no transformation needed.
     const BASE_PATH='\\\\10.10.10.199\\data\\Tags-Data\\Literature Data Collection';
-    const DOMAIN_MAP={'Cardiac CT':'Cardiac CT & MRI','Cardiac MRI':'Cardiac CT & MRI'};
     const domain=String(p.domain||'').trim();
-    const subDomain=String(p.sub_domain||'').trim().replace(/\s+/g,'_');
-    const studyType=String(p.study_type||'').trim().replace(/\s+/g,'_');
-    const mappedDomain=DOMAIN_MAP[domain]||domain;
-    const folderPath=mappedDomain&&subDomain&&studyType
-      ?`${BASE_PATH}\\${mappedDomain}\\${subDomain}\\${studyType}`
+    const subDomain=String(p.sub_domain||'').trim();
+    const studyType=String(p.study_type||'').trim();
+    const folderPath=domain&&subDomain&&studyType
+      ?`${BASE_PATH}\\${domain}\\${subDomain}\\${studyType}`
       :'';
     const pathBtn=folderPath
       ?`<button class="dl-btn" onclick="copyPath('${folderPath.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',this)"
@@ -2194,12 +2194,10 @@ async function toggleDl(id,markDl){
     const doi=String(papers[idx]?.doi||'').replace(/^doi:\s*/i,'');
     const pubLink=String(papers[idx]?.pubmed_link||'').trim();
     const domain=String(papers[idx]?.domain||'').trim();
-    const subDomain=String(papers[idx]?.sub_domain||'').trim().replace(/\s+/g,'_');
-    const studyType=String(papers[idx]?.study_type||'').trim().replace(/\s+/g,'_');
-    const DOMAIN_MAP={'Cardiac CT':'Cardiac CT & MRI','Cardiac MRI':'Cardiac CT & MRI'};
-    const mappedDomain=DOMAIN_MAP[domain]||domain;
+    const subDomain=String(papers[idx]?.sub_domain||'').trim();
+    const studyType=String(papers[idx]?.study_type||'').trim();
     const BASE_PATH='\\\\10.10.10.199\\data\\Tags-Data\\Literature Data Collection';
-    const folderPath=mappedDomain&&subDomain&&studyType?`${BASE_PATH}\\${mappedDomain}\\${subDomain}\\${studyType}`:'';
+    const folderPath=domain&&subDomain&&studyType?`${BASE_PATH}\\${domain}\\${subDomain}\\${studyType}`:'';
     const pathBtn=folderPath
       ?`<button class="dl-btn" onclick="copyPath('${folderPath.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',this)" style="font-size:10px;background:var(--bg2);color:var(--text2);border-color:var(--border);margin-top:4px;width:100%;justify-content:center" title="${folderPath.replace(/"/g,'&quot;')}">📋 Copy folder path</button>`
       :'';
