@@ -372,6 +372,7 @@ tr:hover td{background:#fafaf8}
         <span class="tchip c-t3" data-tier="Tier 3" onclick="setTier('Tier 3')">Tier 3</span>
         <span class="tchip c-t4" data-tier="Tier 4" onclick="setTier('Tier 4')">Tier 4</span>
       </div>
+      <div id="sub-domain-filter-chip" style="display:none;align-items:center;gap:6px;padding:4px 10px;background:var(--blue-l);border:0.5px solid var(--blue);border-radius:6px;margin-bottom:8px;width:fit-content"></div>
       <div class="controls">
         <input class="search-box" id="search-input" placeholder="Search title, journal, type…" oninput="onSearch()">
         <select id="domain-filter" onchange="onDomainFilter()" style="padding:7px 8px;font-size:12px;border:0.5px solid var(--border);border-radius:6px;background:#fff;max-width:180px">
@@ -547,7 +548,7 @@ const AV_COLORS=['#185FA5','#0F6E56','#BA7517','#534AB7','#993556','#D85A30','#3
 // State
 let papers=[],filtered=[];
 let tier='ALL',selectedSources=new Set(['ALL']),q='',sortCol='_total',sortDir=-1,page=1;
-let yf=null,yt=null,journalFilter='',noteFilter='',domainFilter='';
+let yf=null,yt=null,journalFilter='',noteFilter='',domainFilter='',subDomainFilter='';
 let actLog=[];
 let presenceCh=null;
 
@@ -1910,6 +1911,7 @@ function applyFilters(){
     if(yf&&yr&&yr<yf)return false;
     if(yt&&yr&&yr>yt)return false;
     if(domainFilter&&(p.domain||'').trim()!==domainFilter)return false;
+    if(subDomainFilter&&(p.sub_domain||'').trim()!==subDomainFilter)return false;
     if(journalFilter==='__none__'&&(p.journal||'').trim())return false;
     if(journalFilter&&journalFilter!=='__none__'&&(p.journal||'').toLowerCase()!==journalFilter)return false;
     if(noteFilter==='__any__'&&!p.team_notes)return false;
@@ -2760,14 +2762,32 @@ function setSubDashDomain(d){
 }
 
 function filterBySubDomain(sd, domain){
-  // Clicking a row filters the main table to that sub-domain
-  document.getElementById('search-input').value=sd;
-  q=sd;
+  // Proper filter: sub_domain isn't in the search index, so use a dedicated state.
+  subDomainFilter=sd;
   if(domain) domainFilter=domain;
+  renderSubDomainChip();
   applyFilters();
-  // Close dashboard and scroll to table
+  // Close dashboard and scroll to table so the user sees the filtered results
   document.getElementById('subdash-body').style.display='none';
   document.getElementById('subdash-chevron').style.transform='rotate(0deg)';
+  document.querySelector('.tbl-wrap')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function clearSubDomainFilter(){
+  subDomainFilter='';
+  renderSubDomainChip();
+  applyFilters();
+}
+
+function renderSubDomainChip(){
+  const el=document.getElementById('sub-domain-filter-chip');
+  if(!el) return;
+  if(!subDomainFilter){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='inline-flex';
+  el.innerHTML=`<span style="font-size:10px;color:var(--text2)">Sub-domain:</span>
+    <strong style="font-size:11px;color:var(--text)">${subDomainFilter}</strong>
+    <button onclick="clearSubDomainFilter()" title="Clear sub-domain filter"
+      style="border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:13px;padding:0 2px;line-height:1">✕</button>`;
 }
 
 function renderJournalFilter(){
