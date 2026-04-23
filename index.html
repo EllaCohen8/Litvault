@@ -1889,7 +1889,11 @@ function recompute(){
   const n=valid.length;
   function citPts(v){
     if(v<=0||n===0)return 0;
-    const r=valid.filter(s=>s<=v).length/n;
+    // Binary search: `valid` is sorted ascending; find count of entries <= v
+    // in O(log n) instead of O(n). Avoids O(n²) across all papers (~3.5B ops at 59k).
+    let lo=0,hi=n;
+    while(lo<hi){const mid=(lo+hi)>>>1; if(valid[mid]<=v) lo=mid+1; else hi=mid;}
+    const r=lo/n;
     if(r>=0.95)return 25;if(r>=0.85)return 20;if(r>=0.70)return 15;
     if(r>=0.40)return 10;if(r>=0.10)return 5;return 2;
   }
